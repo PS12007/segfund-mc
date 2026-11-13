@@ -104,7 +104,7 @@ entry of C against numerical integration.
 term plus exponential ageing. Survival over a step integrates the hazard exactly.
 Parameters A = 0.00022, B = 2.7e-6, c = 1.124 are the *Standard Ultimate Survival
 Model* from Dickson, Hardy & Waters' textbook. Under this model a 55-year-old has
-about a 5% chance of dying within 10 years (computed in code, `survival(55, 10)`).
+a 3.3% chance of dying within 10 years (`1 - GompertzMakeham().survival(55, 10)` = 0.0334).
 It's a teaching model, not a Canadian table.
 
 **Monte Carlo error.** The estimate is the average of N independent path values.
