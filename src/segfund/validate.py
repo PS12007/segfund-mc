@@ -352,6 +352,54 @@ def v12_sensitivities(base: dict, n_paths: int, seed: int, rate: float = 0.03) -
     return out
 
 
+# ------------------------------------------------------------------------------------
+# V13: nested simulation machinery
+# ------------------------------------------------------------------------------------
+
+
+def v13_nested(base: dict, seed: int, engine: str = "cpu", n_outer_tower: int = 4096) -> list[dict]:
+    """N1: inner value at t0 vs closed-form put given the outer state (GMMB only, HW rates).
+    N2: tower property. With *risk-neutral* outer scenarios,
+        E[ PV_[0,t0] + D(0,t0) V(t0) ] = PV at time 0,
+    so the average nested loss must match a direct time-0 valuation (full contract:
+    mortality, dynamic lapse, fees)."""
+    from segfund import nested as N
+    from segfund.estimators import estimate
+
+    out = []
+    # N1
+    m = _plain(base, contract__gmmb_pct=1.0, economy__hull_white__sigma=0.015)
+    mrw = _plain(base, contract__gmmb_pct=1.0, economy__hull_white__sigma=0.015, economy__measure="real_world")
+    outer = N.simulate_outer(mrw, 64, seed, engine=engine)
+    iv = N.inner_values(m, outer, 512, seed + 1, antithetic=True, control=False, engine=engine)
+    c = m.contract
+    exact = cf.hw_gbm_put_at(m.hw, m.equity, outer.t0, outer.x, outer.F, outer.GM, c.maturity_years, c.mer) * outer.l
+    z = (iv.v - exact) / iv.se
+    pooled = float(np.mean(iv.v - exact) / (np.sqrt(np.sum(iv.se**2)) / iv.v.size))
+    out.append(dict(name="V13a nested inner values vs closed-form put at t0 (64 outer states, GMMB only, HW rates)",
+                    kind="mc", mc=float(np.mean(iv.v)), se=float(np.sqrt(np.sum(iv.se**2)) / iv.v.size),
+                    exact=float(np.mean(exact)), z=pooled, passed=bool(abs(pooled) < Z_TOL and np.abs(z).max() < 5.0),
+                    max_abs_z=float(np.abs(z).max()), rms_z=float(np.sqrt(np.mean(z**2)))))
+    # N2
+    full = _variant(base)
+    outer = N.simulate_outer(full, n_outer_tower, seed + 2, engine=engine)  # risk-neutral outer
+    iv = N.inner_values(full, outer, 16, seed + 3, antithetic=True, control=True, engine=engine)
+    L = N.losses(outer, iv.v)
+    from segfund.risk import cpu_sim, gpu_sim
+
+    sim = gpu_sim if engine == "gpu" else cpu_sim
+    direct = estimate(sim(full, 200_000, seed + 4, True), full, antithetic=True, control="hw_put")
+    mc, se = mean_and_se(L)
+    rec = _mc_record("V13b tower property: mean nested loss (risk-neutral outer, t0 = 1y) vs direct time-0 PV",
+                     mc, math_sqrt(se**2 + direct.se**2), direct.mean)
+    out.append(rec)
+    return out
+
+
+def math_sqrt(v: float) -> float:
+    return float(np.sqrt(v))
+
+
 def run_all(n_paths: int = 200_000, seed: int = 12345, config=DEFAULT_CONFIG) -> list[dict]:
     base = _load_cfg(config)
     recs = [v1_curve_fit(base)]
@@ -363,6 +411,7 @@ def run_all(n_paths: int = 200_000, seed: int = 12345, config=DEFAULT_CONFIG) ->
     recs += v10_variance_reduction(base, n_paths, seed + 50)
     recs += v11_cte(base, n_paths, seed + 60)
     recs += v12_sensitivities(base, n_paths, seed + 70)
+    recs += v13_nested(base, seed + 80)
     return recs
 
 

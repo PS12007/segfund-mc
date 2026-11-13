@@ -52,3 +52,9 @@ def test_v8_phase3_antithetic_and_kahan():
     from segfund.gpu.equality import v8_phase3
 
     _assert_all(v8_phase3(n_paths=20_000, seed=778))
+
+
+def test_v8_phase5_nested():
+    from segfund.gpu.equality import v8_phase5
+
+    _assert_all(v8_phase5(64, 256, 780))

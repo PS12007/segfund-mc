@@ -186,6 +186,34 @@ def v8_phase4(n_paths: int, seed: int) -> list[dict]:
     return recs
 
 
+def v8_phase5(n_outer: int, n_inner: int, seed: int) -> list[dict]:
+    """Nested simulation on GPU vs CPU with identical streams: outer states and inner values."""
+    from segfund import nested as Nn
+    from segfund.config import with_measure
+
+    base = _load_cfg()
+    root = DEFAULT_CONFIG.parents[1]
+    rn, rw = with_measure(base, "risk_neutral", root), with_measure(base, "real_world", root)
+    og = Nn.simulate_outer(rw, n_outer, seed, engine="gpu")
+    oc = Nn.simulate_outer(rw, n_outer, seed, engine="cpu")
+    tol = 1e-6 * og.k0
+    worst = {k: float(np.max(np.abs(getattr(og, k) / getattr(oc, k) - 1))) for k in ("F", "D", "l")}
+    worst["x_abs"] = float(np.max(np.abs(og.x - oc.x)))
+    recs = [dict(name=f"V8e [Triton fused fp32] nested outer state at t0 (real-world, {n_outer} scenarios)", kind="tol",
+                 max_rel=worst, tol=tol, passed=bool(max(worst["F"], worst["D"], worst["l"]) <= tol and worst["x_abs"] < 1e-6))]
+    ig = Nn.inner_values(rn, oc, n_inner, seed + 1, engine="gpu")
+    ic = Nn.inner_values(rn, oc, n_inner, seed + 1, engine="cpu")
+    d = ig.v - ic.v
+    recs.append(dict(name=f"V8e [Triton fused fp32] nested inner values ({n_outer} x {n_inner}, antithetic + CV)", kind="mean",
+                     mean_gpu=float(ig.v.mean()), mean_cpu=float(ic.v.mean()), se_cpu=float(ic.se.mean()),
+                     diff=float(d.mean()), diff_over_se=float(d.mean() / ic.se.mean()),
+                     path_max_abs=float(np.abs(d).max()), path_mean_abs=float(np.abs(d).mean()),
+                     worst_outer_diff_over_se=float(np.max(np.abs(d) / ic.se)),
+                     # gate: every outer scenario's value agrees to 1% of its own inner SE
+                     passed=bool(np.max(np.abs(d) / ic.se) <= 0.01)))
+    return recs
+
+
 def format_table(recs: list[dict]) -> str:
     lines = []
     for r in recs:
