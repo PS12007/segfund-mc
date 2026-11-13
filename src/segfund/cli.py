@@ -38,12 +38,13 @@ def _meta() -> dict:
 
 def cmd_run(args) -> int:
     from segfund.config import load_model
-    from segfund.reference.engine import NumpyNormals, mean_and_se, simulate
+    from segfund.reference.engine import mean_and_se, simulate
+from segfund.rng.philox import PhiloxNormals
 
     m = load_model(args.config)
     n = args.paths or m.sim.n_paths
     t0 = time.perf_counter()
-    r = simulate(m, n, NumpyNormals(args.seed if args.seed is not None else m.sim.seed))
+    r = simulate(m, n, PhiloxNormals(args.seed if args.seed is not None else m.sim.seed))
     secs = time.perf_counter() - t0
     res = {}
     for k in ("pv_net", "pv_maturity_claims", "pv_death_claims", "pv_fees"):
@@ -62,23 +63,41 @@ def cmd_run(args) -> int:
     return 0
 
 
-def cmd_validate(args) -> int:
-    from segfund.validate import format_table, run_all
-
-    t0 = time.perf_counter()
-    recs = run_all(n_paths=args.paths, seed=args.seed)
-    secs = time.perf_counter() - t0
-    text = format_table(recs)
-    print(text)
-    print(f"wall time {secs:.1f} s")
-    out_dir = Path(args.out_dir)
+def _write(out_dir: Path, stem: str, meta: dict, text: str, **payload) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    meta = _meta() | dict(n_paths=args.paths, seed=args.seed, wall_s=secs)
-    (out_dir / "phase1_cpu.json").write_text(json.dumps(dict(meta=meta, checks=recs), indent=2))
-    (out_dir / "phase1_cpu.txt").write_text(
-        "\n".join(f"{k}: {v}" for k, v in meta.items()) + "\n\n" + text + "\n"
-    )
-    print(f"wrote {out_dir / 'phase1_cpu.json'} and .txt")
+    (out_dir / f"{stem}.json").write_text(json.dumps(dict(meta=meta, **payload), indent=2))
+    (out_dir / f"{stem}.txt").write_text("\n".join(f"{k}: {v}" for k, v in meta.items()) + "\n\n" + text + "\n")
+    print(f"wrote {out_dir / stem}.json and .txt")
+
+
+def cmd_validate(args) -> int:
+    out_dir = Path(args.out_dir)
+    t0 = time.perf_counter()
+    if args.gpu:
+        from segfund.gpu import equality as E
+
+        recs = E.v7_rng()
+        v8, timings = E.v8_engines(args.paths, args.seed)
+        recs += v8
+        secs = time.perf_counter() - t0
+        text = E.format_table(recs)
+        text += "\n\nwall-clock (one run each, includes host copies; not a benchmark):\n" + "\n".join(
+            f"  {t['variant']}: numpy {t['numpy_fp64_s']:.2f}s | torch unfused {t['torch_unfused_fp32_s']:.2f}s"
+            f" | triton fused {t['triton_fused_fp32_s']:.3f}s" for t in timings
+        )
+        print(text)
+        meta = _meta() | E.gpu_info() | dict(n_paths=args.paths, seed=args.seed, wall_s=secs)
+        _write(out_dir, "phase2_gpu", meta, text, checks=recs, timings=timings)
+    else:
+        from segfund.validate import format_table, run_all
+
+        recs = run_all(n_paths=args.paths, seed=args.seed)
+        secs = time.perf_counter() - t0
+        text = format_table(recs)
+        print(text)
+        meta = _meta() | dict(n_paths=args.paths, seed=args.seed, wall_s=secs, rng="Philox4x32-10 counter-based")
+        _write(out_dir, "phase1_cpu", meta, text, checks=recs)
+    print(f"wall time {secs:.1f} s")
     return 0 if all(r["passed"] for r in recs) else 1
 
 
@@ -104,6 +123,7 @@ def main(argv=None) -> int:
     v = sub.add_parser("validate", help="run closed-form validations")
     v.add_argument("--paths", type=int, default=200_000)
     v.add_argument("--seed", type=int, default=12345)
+    v.add_argument("--gpu", action="store_true", help="GPU vs CPU equality checks (V7, V8) instead of closed forms")
     v.add_argument("--out-dir", default=str(ROOT / "results" / "validation"))
     v.set_defaults(func=cmd_validate)
 

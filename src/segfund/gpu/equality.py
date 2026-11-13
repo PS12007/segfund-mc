@@ -1,0 +1,167 @@
+"""Phase 2: GPU vs CPU equality on identical scenarios (V7, V8).
+
+Pass criteria were written down from an fp32 error model *before* the full run
+(see LEARNING.md section 2.4), not tuned to whatever came out:
+
+  V7a  Philox words: bitwise identical (NumPy, PyTorch, Triton). Integer arithmetic, no excuse.
+  V7b  normals |z_gpu - z_cpu| <= 1e-5. Box-Muller in fp32 with hardware approximate
+       log/cos: cos.approx has absolute error ~1e-6, times |rad| <= 5.77 -> ~5e-6.
+  V8a  per-path fund, discount factor, in-force: relative error <= 1e-6 * n_steps.
+       Each step adds a few fp32 roundings (~6e-8 each) plus the normal's error
+       times its loading (~5e-6 * 0.05); summed linearly over 120 steps that is ~5e-5.
+  V8b  portfolio mean of each PV component: |mean_gpu - mean_cpu| <= 0.01 * SE.
+       A precision error that small cannot change any reported number.
+  Per-path PV differences are reported in dollars (relative error is meaningless
+  where claims and fees nearly cancel), not gated.
+"""
+
+from __future__ import annotations
+
+import copy
+import time
+
+import numpy as np
+import torch
+
+from segfund.config import model_from_dict
+from segfund.gpu.kernels import FusedEngine, philox_normals_gpu
+from segfund.gpu.torch_engine import philox4x32_torch, simulate_torch
+from segfund.reference.engine import mean_and_se, simulate
+from segfund.rng import philox as P
+from segfund.rng.philox import PhiloxNormals
+from segfund.validate import DEFAULT_CONFIG, _load_cfg
+
+FIELDS_STATE = ("fund_T", "discount_T", "inforce_T")
+FIELDS_PV = ("pv_net", "pv_maturity_claims", "pv_death_claims", "pv_fees")
+
+
+def gpu_info() -> dict:
+    import triton
+
+    p = torch.cuda.get_device_properties(0)
+    return dict(
+        gpu=p.name,
+        compute_capability=f"{p.major}.{p.minor}",
+        torch=torch.__version__,
+        torch_cuda=torch.version.cuda,
+        triton=triton.__version__,
+    )
+
+
+def v7_rng(n: int = 1 << 20) -> list[dict]:
+    out = []
+    cases = [
+        (12345, 0, 0),
+        ((0xA4093822 << 32) | 0x299F31D0, 359, 0),
+        (2**64 - 1, 7, 2**31 - n - 1),  # largest key, highest path ids the kernel allows
+    ]
+    for seed, step, off in cases:
+        ids = np.arange(off, off + n, dtype=np.uint64)
+        ref = np.stack(P.philox4x32(ids, step, P.STREAM_MAIN, 0, seed)).astype(np.int64)
+        raw_tr, z_tr = philox_normals_gpu(n, step, seed, off)
+        raw_th = torch.stack(philox4x32_torch(torch.arange(off, off + n, device="cuda"), step, 0, 0, seed)).cpu().numpy()
+        z_ref = P.normals3(ids, step, seed)
+        dz = np.abs(z_tr - z_ref)
+        tag = f"seed={seed:#x} step={step} paths=[{off}, {off + n})"
+        out.append(dict(name=f"V7a Philox words, Triton == NumPy, {tag}", kind="exact",
+                        n_words=int(ref.size), mismatches=int(np.sum(raw_tr != ref)), passed=bool(np.array_equal(raw_tr, ref))))
+        out.append(dict(name=f"V7a Philox words, PyTorch == NumPy, {tag}", kind="exact",
+                        n_words=int(ref.size), mismatches=int(np.sum(raw_th != ref)), passed=bool(np.array_equal(raw_th, ref))))
+        out.append(dict(name=f"V7b normals, Triton fp32 vs NumPy fp64, {tag}", kind="tol",
+                        max_abs=float(dz.max()), mean_abs=float(dz.mean()), tol=1e-5, passed=bool(dz.max() <= 1e-5)))
+    return out
+
+
+def _variants(base: dict) -> dict[str, dict]:
+    v = {"base (mortality, dynamic lapse, fee)": copy.deepcopy(base)}
+    c = copy.deepcopy(base)
+    c["contract"]["resets"] = {"enabled": True, "every_years": 1, "min_years_to_maturity": 3}
+    c["contract"]["deposits"] = [{"t": 0.0, "amount": 60000}, {"t": 2.0, "amount": 40000}]
+    v["resets + second deposit at t=2"] = c
+    c = copy.deepcopy(base)
+    c["economy"]["measure"] = "real_world"
+    c["economy"]["hull_white"]["market_price_of_risk"] = 0.1
+    c["contract"]["maturity_years"] = 20
+    v["real-world, 20 years (240 steps)"] = c
+    return v
+
+
+def _compare(name: str, cpu, gpu, n_steps: int, engine: str) -> list[dict]:
+    recs = []
+    tol_state = 1e-6 * n_steps
+    worst = {}
+    for f in FIELDS_STATE:
+        a, b = getattr(gpu, f), getattr(cpu, f)
+        worst[f] = float(np.max(np.abs(a - b) / np.abs(b)))
+    recs.append(dict(name=f"V8a [{engine}] per-path state rel. error, {name}", kind="tol",
+                     max_rel={k: v for k, v in worst.items()}, tol=tol_state,
+                     passed=bool(max(worst.values()) <= tol_state)))
+    for f in FIELDS_PV:
+        a, b = getattr(gpu, f), getattr(cpu, f)
+        mg, _ = mean_and_se(a)
+        mc, se = mean_and_se(b)
+        d = np.abs(a - b)
+        recs.append(dict(
+            name=f"V8b [{engine}] {f}, {name}", kind="mean",
+            mean_gpu=mg, mean_cpu=mc, se_cpu=se, diff=mg - mc, diff_over_se=(mg - mc) / se if se > 0 else 0.0,
+            path_max_abs=float(d.max()), path_mean_abs=float(d.mean()),
+            passed=bool(abs(mg - mc) <= 0.01 * se),
+        ))
+    return recs
+
+
+def v8_engines(n_paths: int, seed: int) -> tuple[list[dict], list[dict]]:
+    base = _load_cfg()
+    recs, timings = [], []
+    for name, cfg in _variants(base).items():
+        m = model_from_dict(cfg, DEFAULT_CONFIG.parents[1])
+        n_steps = m.time_grid().size - 1
+        t = time.perf_counter()
+        cpu = simulate(m, n_paths, PhiloxNormals(seed))
+        t_cpu = time.perf_counter() - t
+        eng = FusedEngine(m)
+        eng.simulate(1024, seed)  # compile / warm up
+        torch.cuda.synchronize()
+        t = time.perf_counter()
+        tri = eng.simulate(n_paths, seed)
+        t_tri = time.perf_counter() - t
+        t = time.perf_counter()
+        th32 = simulate_torch(m, n_paths, seed, dtype=torch.float32)
+        t_th = time.perf_counter() - t
+        th64 = simulate_torch(m, n_paths, seed, dtype=torch.float64)
+        recs += _compare(name, cpu, tri, n_steps, "Triton fused fp32")
+        recs += _compare(name, cpu, th32, n_steps, "PyTorch unfused fp32")
+        # fp64 on the GPU: same algorithm, same numbers -> differences should be ~1e-12.
+        # This separates "precision" from "logic" differences.
+        d64 = max(float(np.max(np.abs(getattr(th64, f) - getattr(cpu, f)) / np.abs(getattr(cpu, f)))) for f in FIELDS_STATE)
+        recs.append(dict(name=f"V8c [PyTorch unfused fp64] per-path state rel. error, {name}", kind="tol",
+                         max_rel=d64, tol=1e-10, passed=bool(d64 <= 1e-10)))
+        timings.append(dict(variant=name, n_paths=n_paths, n_steps=n_steps,
+                            numpy_fp64_s=t_cpu, triton_fused_fp32_s=t_tri, torch_unfused_fp32_s=t_th,
+                            note="single wall-clock run incl. host copies; NOT a benchmark (phase 6)"))
+    return recs, timings
+
+
+def format_table(recs: list[dict]) -> str:
+    lines = []
+    for r in recs:
+        flag = "PASS" if r["passed"] else "FAIL"
+        lines.append(f"[{flag}] {r['name']}")
+        if r["kind"] == "exact":
+            lines.append(f"        words={r['n_words']}  mismatches={r['mismatches']}")
+        elif r["kind"] == "tol":
+            mr = r.get("max_rel")
+            if isinstance(mr, dict):
+                lines.append("        " + "  ".join(f"{k}={v:.2e}" for k, v in mr.items()) + f"  tol={r['tol']:.1e}")
+            elif mr is not None:
+                lines.append(f"        max_rel={mr:.2e}  tol={r['tol']:.1e}")
+            else:
+                lines.append(f"        max_abs={r['max_abs']:.2e}  mean_abs={r['mean_abs']:.2e}  tol={r['tol']:.1e}")
+        else:
+            lines.append(
+                f"        gpu={r['mean_gpu']:.6f}  cpu={r['mean_cpu']:.6f}  diff={r['diff']:+.2e} ({r['diff_over_se']:+.1e} SE)"
+                f"  per-path |d| max={r['path_max_abs']:.2e} mean={r['path_mean_abs']:.2e}"
+            )
+    n_pass = sum(r["passed"] for r in recs)
+    lines.append(f"\n{n_pass}/{len(recs)} passed")
+    return "\n".join(lines)
