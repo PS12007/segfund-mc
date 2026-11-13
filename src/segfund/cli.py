@@ -148,6 +148,43 @@ def cmd_validate(args) -> int:
     return 0 if all(r["passed"] for r in recs if r.get("gated", True)) else 1
 
 
+def cmd_nested(args) -> int:
+    """Capital-style CTE at t0 three ways: brute-force ground truth, cheap brute force, LSMC."""
+    import numpy as np
+
+    from segfund import nested as N
+    from segfund.config import load_config, with_measure
+
+    cfg, base_dir = load_config(args.config)
+    rn, rw = with_measure(cfg, "risk_neutral", base_dir), with_measure(cfg, "real_world", base_dir)
+    engine = _pick_engine(args.engine)
+    rng = np.random.default_rng(args.seed)
+    s = lambda: int(rng.integers(1, 2**62))  # noqa: E731
+    t0 = time.perf_counter()
+    test = N.simulate_outer(rw, args.n_outer, s(), t0=args.t0, engine=engine)
+    gt = N.inner_values(rn, test, args.n_inner_gt, s(), engine=engine)
+    cheap = N.inner_values(rn, test, args.n_inner_cheap, s(), engine=engine)
+    fit_outer = N.simulate_outer(rw, args.n_fit, s(), t0=args.t0, engine=engine)
+    px = N.lsmc_fit(rn, fit_outer, N.pair_targets(rn, fit_outer, s(), engine=engine), "poly+put", 2 * args.n_fit)
+    rows = [("brute force (reference)", gt.paths, N.compare(gt.v, gt, test)),
+            (f"brute force, {args.n_inner_cheap} inner + CV", cheap.paths, N.compare(cheap.v, gt, test)),
+            (f"LSMC poly+put, {args.n_fit} fit scenarios", 2 * args.n_fit, N.compare(px.predict(rn, test), gt, test))]
+    secs = time.perf_counter() - t0
+    print(f"config {args.config}  engine {engine}  valuation date t0 = {args.t0} y  outer scenarios {args.n_outer}")
+    print("loss = PV of claims - fees to t0 + discounted risk-neutral value at t0 (real-world outer scenarios)")
+    print(f"{'method':<36} {'inner paths':>13} {'CTE(95)':>10} {'CTE(70)':>10} {'vs reference':>13}")
+    for name, paths, c in rows:
+        print(f"{name:<36} {paths:>13,} {c['cte95_proxy']:>10,.2f} {c['cte70_proxy']:>10,.2f} {c['cte95_error']:>+13.2f}")
+    print(f"reference CTE(95) outer-sampling SE: {rows[0][2]['cte95_outer_se']:.2f}   wall {secs:.1f} s")
+    if args.out:
+        out = dict(meta=_meta(), args={k: v for k, v in vars(args).items() if k != "func"}, engine=engine,
+                   rows=[dict(method=n, inner_paths=p, **c) for n, p, c in rows])
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_text(json.dumps(out, indent=2))
+        print(f"wrote {args.out}")
+    return 0
+
+
 def cmd_not_yet(phase: int):
     def run(args) -> int:
         print(f"`segfund {args.cmd}` is implemented in phase {phase}; not available yet.")
@@ -178,7 +215,17 @@ def main(argv=None) -> int:
     v.set_defaults(func=cmd_validate)
 
     sub.add_parser("bench", help="benchmarks (phase 6)").set_defaults(func=cmd_not_yet(6))
-    sub.add_parser("nested", help="nested simulation + LSMC (phase 5)").set_defaults(func=cmd_not_yet(5))
+    nst = sub.add_parser("nested", help="nested simulation vs LSMC: CTE of the loss at a future valuation date")
+    nst.add_argument("--config", default=str(ROOT / "configs" / "base.yaml"))
+    nst.add_argument("--engine", choices=["auto", "cpu", "gpu"], default="auto")
+    nst.add_argument("--t0", type=float, default=1.0)
+    nst.add_argument("--n-outer", type=int, default=2048)
+    nst.add_argument("--n-inner-gt", type=int, default=4096)
+    nst.add_argument("--n-inner-cheap", type=int, default=32)
+    nst.add_argument("--n-fit", type=int, default=1 << 18)
+    nst.add_argument("--seed", type=int, default=2026)
+    nst.add_argument("--out", default=None)
+    nst.set_defaults(func=cmd_nested)
 
     args = p.parse_args(argv)
     return args.func(args)

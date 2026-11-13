@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "timestamp": "2026-11-13T04:46:16",
+    "git_commit": "1467b03-dirty",
+    "python": "3.12.10",
+    "numpy": "2.5.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel"
+  },
+  "args": {
+    "cmd": "nested",
+    "config": "C:\\segfund-mc\\configs\\base.yaml",
+    "engine": "auto",
+    "t0": 1.0,
+    "n_outer": 2048,
+    "n_inner_gt": 4096,
+    "n_inner_cheap": 32,
+    "n_fit": 262144,
+    "seed": 2026,
+    "out": "results\\runs\\nested_default_gpu.json"
+  },
+  "engine": "gpu",
+  "rows": [
+    {
+      "method": "brute force (reference)",
+      "inner_paths": 8388608,
+      "rmse": 0.0,
+      "rmse_net_of_gt_noise": 0.0,
+      "gt_noise_rms": 8.432053606123386,
+      "mean_error": 0.0,
+      "max_abs_error": 0.0,
+      "cte70_gt": 2555.4786816593205,
+      "cte70_proxy": 2555.4786816593205,
+      "cte70_error": 0.0,
+      "cte70_outer_se": 77.79895893645107,
+      "cte95_gt": 5119.666611011389,
+      "cte95_proxy": 5119.666611011389,
+      "cte95_error": 0.0,
+      "cte95_outer_se": 183.98707278072834
+    },
+    {
+      "method": "brute force, 32 inner + CV",
+      "inner_paths": 65536,
+      "rmse": 94.67182573705469,
+      "rmse_net_of_gt_noise": 94.29557285668672,
+      "gt_noise_rms": 8.432053606123386,
+      "mean_error": 1.8492379773586558,
+      "max_abs_error": 485.2924798921058,
+      "cte70_gt": 2555.4786816593205,
+      "cte70_proxy": 2556.4527763911956,
+      "cte70_error": 0.9740947318750841,
+      "cte70_outer_se": 77.79895893645107,
+      "cte95_gt": 5119.666611011389,
+      "cte95_proxy": 5126.471881822831,
+      "cte95_error": 6.805270811441915,
+      "cte95_outer_se": 183.98707278072834
+    },
+    {
+      "method": "LSMC poly+put, 262144 fit scenarios",
+      "inner_paths": 524288,
+      "rmse": 30.270635486752454,
+      "rmse_net_of_gt_noise": 29.072527319710243,
+      "gt_noise_rms": 8.432053606123386,
+      "mean_error": 13.550164733506302,
+      "max_abs_error": 207.37275392900665,
+      "cte70_gt": 2555.4786816593205,
+      "cte70_proxy": 2582.709066362263,
+      "cte70_error": 27.2303847029425,
+      "cte70_outer_se": 77.79895893645107,
+      "cte95_gt": 5119.666611011389,
+      "cte95_proxy": 5169.075291994609,
+      "cte95_error": 49.40868098321971,
+      "cte95_outer_se": 183.98707278072834
+    }
+  ]
+}

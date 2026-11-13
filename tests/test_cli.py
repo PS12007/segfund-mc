@@ -14,6 +14,16 @@ def test_cli_run_writes_json(tmp_path, capsys):
     assert data["delta"]["value"] < 0  # put-like liability falls when the fund rises
 
 
+def test_cli_nested_cpu_small(tmp_path):
+    out = tmp_path / "n.json"
+    args = ["nested", "--engine", "cpu", "--n-outer", "200", "--n-inner-gt", "64", "--n-inner-cheap", "8",
+            "--n-fit", "2000", "--out", str(out)]
+    assert main(args) == 0
+    rows = json.loads(out.read_text())["rows"]
+    assert rows[0]["cte95_error"] == 0.0  # the reference compared with itself
+    assert len(rows) == 3
+
+
 def test_cli_unbuilt_commands_say_so(capsys):
-    assert main(["nested"]) == 2
-    assert "phase 5" in capsys.readouterr().out
+    assert main(["bench"]) == 2
+    assert "phase 6" in capsys.readouterr().out
