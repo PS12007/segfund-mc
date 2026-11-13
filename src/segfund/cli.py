@@ -36,27 +36,71 @@ def _meta() -> dict:
     )
 
 
-def cmd_run(args) -> int:
-    from segfund.config import load_model
-    from segfund.reference.engine import mean_and_se, simulate
-    from segfund.rng.philox import PhiloxNormals
+def _pick_engine(name: str) -> str:
+    if name != "auto":
+        return name
+    try:
+        import torch
 
-    m = load_model(args.config)
-    n = args.paths or m.sim.n_paths
+        return "gpu" if torch.cuda.is_available() else "cpu"
+    except ImportError:
+        return "cpu"
+
+
+def cmd_run(args) -> int:
+    """Value one contract: PV (risk-neutral), CTE(70/95) (real-world), delta and rho (CRN)."""
+    from segfund import risk
+    from segfund.config import load_config, with_measure
+    from segfund.estimators import estimate
+    from segfund.reference.engine import mean_and_se
+
+    cfg, base_dir = load_config(args.config)
+    m_rn = with_measure(cfg, "risk_neutral", base_dir)
+    m_rw = with_measure(cfg, "real_world", base_dir)
+    engine = _pick_engine(args.engine)
+    sim = risk.gpu_sim if engine == "gpu" else risk.cpu_sim
+    n = args.paths or m_rn.sim.n_paths
+    seed = args.seed if args.seed is not None else m_rn.sim.seed
+    anti = m_rn.sim.antithetic
+    if anti and n % 2:
+        n += 1
     t0 = time.perf_counter()
-    r = simulate(m, n, PhiloxNormals(args.seed if args.seed is not None else m.sim.seed))
+
+    r = sim(m_rn, n, seed, anti)
+    pv = estimate(r, m_rn)
+    # components: same paths, antithetic pairing respected, no control variate
+    comps = {}
+    for k in ("pv_maturity_claims", "pv_death_claims", "pv_fees"):
+        e = estimate(r, m_rn, field=k, antithetic=anti, control="none")
+        comps[k] = {"mean": e.mean, "se": e.se}
+    rw = sim(m_rw, n, seed + 1, False)  # CTE: independent paths, no antithetic pairing
+    ctes = {f"cte{int(a * 100)}": risk.cte(rw.pv_net, a).as_dict() for a in (0.70, 0.95)}
+    rw_mean = dict(zip(("mean", "se"), mean_and_se(rw.pv_net)))
+    dl = risk.delta(sim, m_rn, n, seed + 2, h=args.delta_bump, antithetic=anti)
+    rh = risk.rho(sim, m_rn, n, seed + 3, shift=args.rho_shift_bp * 1e-4, antithetic=anti)
     secs = time.perf_counter() - t0
-    res = {}
-    for k in ("pv_net", "pv_maturity_claims", "pv_death_claims", "pv_fees"):
-        mu, se = mean_and_se(getattr(r, k))
-        res[k] = {"mean": mu, "se": se}
-    print(f"config      : {args.config}  ({m.measure}, {n} paths, engine=numpy-fp64)")
-    print(f"deposit     : {m.contract.initial_deposit:,.0f}")
-    for k, v in res.items():
-        print(f"{k:<20}: {v['mean']:>12,.2f}  (se {v['se']:,.2f})")
-    print(f"wall time   : {secs:.2f} s")
+
+    S0 = m_rn.contract.initial_deposit
+    method = ("antithetic + " if anti else "") + (m_rn.sim.control_variate if m_rn.sim.control_variate != "none" else "plain")
+    print(f"config  : {args.config}   engine: {engine}   paths: {n}   seed: {seed}")
+    print(f"deposit : {S0:,.0f}   (educational model; not actuarially approved)")
+    print(f"\nRisk-neutral value of the guarantee (PV claims - PV fees), estimator: {method}")
+    print(f"  PV net liability     {pv.mean:>12,.2f}   SE {pv.se:,.2f}   95% CI [{pv.mean - 1.96 * pv.se:,.2f}, {pv.mean + 1.96 * pv.se:,.2f}]")
+    for k, v in comps.items():
+        print(f"  {k:<20} {v['mean']:>12,.2f}   SE {v['se']:,.2f}   ({'antithetic, ' if anti else ''}no control variate)")
+    print("\nReal-world tail of the PV net liability (independent paths)")
+    print(f"  mean                 {rw_mean['mean']:>12,.2f}   SE {rw_mean['se']:,.2f}")
+    for k, v in ctes.items():
+        print(f"  {k.upper():<20} {v['cte']:>12,.2f}   SE {v['se']:,.2f}   (VaR {v['var']:,.2f}, {v['k']} tail paths)")
+    print("\nSensitivities (risk-neutral, common random numbers)")
+    print(f"  delta                {dl.value:>12.5f}   SE {dl.se:.5f}   per $ of fund   "
+          f"(a 1% market drop changes PV by {-dl.value * 0.01 * S0:+,.2f})")
+    print(f"  rho                  {rh.value:>12.4f}   SE {rh.se:.4f}   per +1bp parallel shift")
+    print(f"\nwall time {secs:.2f} s (not a benchmark; see segfund bench)")
     if args.out:
-        out = dict(meta=_meta(), config=str(args.config), n_paths=n, engine="numpy-fp64", wall_s=secs, results=res)
+        out = dict(meta=_meta(), config=str(args.config), engine=engine, n_paths=n, seed=seed, wall_s=secs,
+                   pv=pv.as_dict(), components=comps, real_world_mean=rw_mean, cte=ctes,
+                   delta=dl.as_dict(), rho=rh.as_dict())
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         Path(args.out).write_text(json.dumps(out, indent=2))
         print(f"wrote {args.out}")
@@ -80,6 +124,7 @@ def cmd_validate(args) -> int:
         v8, timings = E.v8_engines(args.paths, args.seed)
         recs += v8
         recs += E.v8_phase3(args.paths, args.seed + 1)
+        recs += E.v8_phase4(args.paths, args.seed + 2)
         secs = time.perf_counter() - t0
         text = E.format_table(recs)
         text += "\n\nwall-clock (one run each, includes host copies; not a benchmark):\n" + "\n".join(
@@ -119,6 +164,9 @@ def main(argv=None) -> int:
     r.add_argument("--paths", type=int, default=None)
     r.add_argument("--seed", type=int, default=None)
     r.add_argument("--out", default=None, help="write results JSON here")
+    r.add_argument("--engine", choices=["auto", "cpu", "gpu"], default="auto")
+    r.add_argument("--delta-bump", type=float, default=0.01, help="relative fund bump for delta (default 1%%)")
+    r.add_argument("--rho-shift-bp", type=float, default=10.0, help="curve shift for rho in bp (default 10)")
     r.set_defaults(func=cmd_run)
 
     v = sub.add_parser("validate", help="run closed-form validations")
