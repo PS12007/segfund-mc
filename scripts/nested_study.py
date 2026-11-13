@@ -12,7 +12,8 @@ Each cheaper method is repeated R times with fresh seeds; errors are measured
 against GT on the same test scenarios (so outer sampling error cancels).
 
 Cost is reported as total inner paths (hardware-independent) and wall time.
-Wall times are single runs with CUDA synchronisation, NOT clock-gated benchmarks.
+Wall times are medians over the R reps (so a first call's Triton compile is excluded),
+with CUDA synchronisation, NOT clock-gated benchmarks.
 """
 
 from __future__ import annotations
@@ -77,10 +78,10 @@ def main():
 
     rows = []
 
-    def record(method, cost_paths, results, secs):
+    def record(method, cost_paths, results, times):
         keys = results[0].keys()
         agg = {k: [r[k] for r in results] for k in keys}
-        row = dict(method=method, inner_paths=cost_paths, wall_s_first_rep=secs,
+        secs = float(np.median(times))  # median over reps: excludes the one-off Triton compile of a first call
                    rmse_value=float(np.mean(agg["rmse_net_of_gt_noise"])),
                    cte95_err_mean=float(np.mean(agg["cte95_error"])),
                    cte95_err_rms=float(np.sqrt(np.mean(np.square(agg["cte95_error"])))),
@@ -95,18 +96,18 @@ def main():
     # brute force with fewer inner paths
     for ctrl in (False, True):
         for n_in in (8, 32, 128, 512, 2048):
-            res, secs = [], None
+            res, times = [], []
             for r in range(a.reps):
                 iv, s = timed(lambda: N.inner_values(rn, test, n_in, next(seeds), antithetic=True, control=ctrl))
-                secs = s if secs is None else secs
+                times.append(s)
                 res.append(N.compare(iv.v, gt, test))
-            record(f"brute force n_in={n_in}{' +CV' if ctrl else ''}", a.n_test * n_in, res, secs)
+            record(f"brute force n_in={n_in}{' +CV' if ctrl else ''}", a.n_test * n_in, res, times)
 
     # LSMC
     for kind in N.BASES:
         for k in (12, 14, 16, 18, 20):
             n_fit = 1 << k
-            res, secs = [], None
+            res, times = [], []
             for r in range(a.reps):
                 def run():
                     of = N.simulate_outer(rw, n_fit, next(seeds), t0=a.t0)
@@ -114,11 +115,11 @@ def main():
                     px = N.lsmc_fit(rn, of, y, kind, fit_paths=2 * n_fit)
                     return px, px.predict(rn, test)
                 (px, vp), s = timed(run)
-                secs = s if secs is None else secs
+                times.append(s)
                 c = N.compare(vp, gt, test)
                 c["r2_noisy"] = px.r2_noisy
                 res.append(c)
-            record(f"LSMC {kind} n_fit=2^{k}", 2 * n_fit, res, secs)
+            record(f"LSMC {kind} n_fit=2^{k}", 2 * n_fit, res, times)
 
     # CPU cost of brute force (measured on a slice, extrapolated linearly in paths)
     sl = test.subset(np.arange(16))
@@ -126,10 +127,10 @@ def main():
     N.inner_values(rn, sl, 512, 1, antithetic=True, control=True, engine="cpu")
     cpu_s_per_path = (time.perf_counter() - t) / (16 * 512)
 
-    lines.append(f"{'method':<34} {'inner paths':>13} {'RMSE(V)':>9} {'CTE95 err mean':>15} {'rms':>8} {'CTE70 err rms':>14} {'GPU wall':>9}")
+    lines.append(f"{'method':<34} {'inner paths':>13} {'RMSE(V)':>9} {'CTE95 err mean':>15} {'rms':>8} {'CTE70 err rms':>14} {'GPU wall (median)':>18}")
     for r in rows:
         lines.append(f"{r['method']:<34} {r['inner_paths']:>13,} {r['rmse_value']:>9.2f} {r['cte95_err_mean']:>+15.2f} "
-                     f"{r['cte95_err_rms']:>8.2f} {r['cte70_err_rms']:>14.2f} {r['wall_s_first_rep']:>8.3f}s")
+                     f"{r['cte95_err_rms']:>8.2f} {r['cte70_err_rms']:>14.2f} {r['wall_s_median']:>17.3f}s")
     lines += [
         "",
         f"RMSE(V): per-outer value error vs GT, net of GT's own noise, averaged over {a.reps} reps.",
