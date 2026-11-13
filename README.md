@@ -11,7 +11,7 @@ and its assumptions are illustrative.**
 
 ## Status
 
-Phases 1 to 4 of 6 are done:
+Phases 1 to 5 of 6 are done:
 1. CPU fp64 reference model and closed-form validation.
 2. GPU kernels (PyTorch unfused, Triton fused), counter-based RNG, and GPU vs CPU
    equality checks.
@@ -19,8 +19,9 @@ Phases 1 to 4 of 6 are done:
    an fp32 precision study.
 4. Risk metrics: risk-neutral PV, real-world CTE(70)/CTE(95), and delta and rho
    by common random numbers.
+5. Nested simulation (real-world outer, risk-neutral inner) and an LSMC proxy.
 
-Nested simulation/LSMC and benchmarks are not built yet.
+Benchmarks (phase 6) and the HTML report are not built yet.
 **There are no quotable speed results yet.** The phase 3 timings all failed the
 clock gate: the laptop GPU was power-capped at 1,515 MHz, 49% of max.
 
@@ -49,6 +50,27 @@ What these mean:
   but the worst 5% average an $11.6k loss.
 
 ![loss distribution](results/risk/loss_hist.png)
+
+**Nested simulation vs LSMC** (`segfund nested`; study in
+[`results/nested/nested_study.txt`](results/nested/nested_study.txt)). Loss at a
+1-year valuation date: year-1 cash flows plus the risk-neutral value at t0, over
+8,192 real-world scenarios.
+- The ground truth used 16,384 inner paths per scenario (134M paths). It ran in
+  0.88 s on the GPU, versus about 46 min extrapolated for the NumPy reference.
+  Neither time is clock-gated.
+- The ground-truth CTE(95) is 5,305.89, with an outer-sampling SE of 88.
+
+| Method (8 replications) | Inner paths | CTE(95) error, RMS |
+|---|---|---|
+| brute force, 32 inner + control variate | 262,144 | 11.4 |
+| brute force, 512 inner, plain | 4,194,304 | 27.4 |
+| LSMC, polynomial basis, 2^20 fit scenarios | 2,097,152 | 27.3 (stuck near −24 bias) |
+| LSMC, polynomial + put basis, 2^20 fit scenarios | 2,097,152 | 11.4 |
+
+In this model LSMC does not beat brute force with a control variate. Its error is
+limited by the choice of basis functions. See LEARNING.md §5.
+
+![nested](results/nested/nested.png)
 
 ## Validation
 
@@ -161,3 +183,6 @@ in that setup.
   heavily on them.
 - Pathwise delta only covers contracts without dynamic lapse, resets or later
   deposits. The full model uses bump-and-revalue.
+- Nested/LSMC: one valuation date; resets are off, so the guarantee is fixed in the
+  state. The LSMC basis is hand-picked and validated only against this model's
+  nested runs.

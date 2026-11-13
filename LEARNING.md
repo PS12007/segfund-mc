@@ -853,3 +853,232 @@ Validation (`results/validation/phase1_cpu.txt`, now 34/34;
    lapse rates. That's a second chain-rule term I didn't implement. Without it,
    pathwise and CRN agree on identical paths (z = -1.2). The full model uses CRN,
    which needs no derivatives, only a careful bump size.
+
+---
+
+## Phase 5: nested simulation and LSMC
+
+### 5.1 The finance: why "nested"?
+
+Phase 4 asked what the whole 10-year contract costs in bad scenarios. Capital
+frameworks often ask a different question: **if markets move against us over
+the next year, what will the guarantee be worth at the end of that year?** At
+that future date the liability has to be valued market-consistently
+(risk-neutral), given whatever happened in between. That needs two layers:
+
+- **outer scenarios** (real-world, 0 → t0 = 1 year): what might happen;
+- **inner valuations** (risk-neutral, t0 → T, starting from each outer state):
+  what the remaining guarantee is worth at t0 in that world.
+
+Loss per outer scenario, as at time 0:
+
+    L = PV(claims - fees paid in year 1)  +  D(0, t0) × V(t0 | state)
+
+and the capital-style metric is CTE(95) of L.
+
+**Why this one-year CTE(95) (about $5.3k) is so much smaller than phase 4's
+whole-path CTE(95) (about $11.6k).** Phase 4's loss is what actually gets paid
+along a 10-year real-world path, so the tail includes paths that crash *and keep
+going badly*. Here only year 1 is a scenario. The remaining 9 years enter as a
+risk-neutral *value*, an average over every possible future. That average is
+less extreme than any single bad future. Different question, different number;
+neither is wrong.
+
+**Cost.** Brute force needs N_outer × N_inner paths. With 8,192 × 16,384 that's
+134 million inner paths (from t0 to T, 108 monthly steps each). On a CPU that's
+the reason proxies exist. Here:
+- the fused GPU kernel did it in **0.88 s** (not clock-gated, one run);
+- the NumPy fp64 reference, measured at 20.5 µs per inner path, would take
+  **about 46 minutes** (extrapolated, not run).
+
+### 5.2 The math
+
+**State at t0.** Everything the future depends on: rate factor x, fund F,
+guarantee bases GM and GD, in-force l. Two simplifications follow from the
+model:
+- **The value is linear in l.** In-force just scales every future cash flow, so
+  we model V / l and multiply back. This is exact here because future lapse and
+  mortality rates don't depend on how many policies are left.
+- **GM and GD are fixed** because resets are off. With resets they'd vary across
+  scenarios and become extra regression variables.
+
+**Inner estimator.**
+- Antithetic pairs *within* each outer scenario: the pairing block is the outer
+  scenario's inner paths, so a pair never straddles two scenarios.
+- Control variate: the maturity put on F(t0) · unit(T), strike GM. Its value at
+  t0 is known in closed form given (x(t0), F(t0)): Hull-White gives
+  P(t0, T | x) exactly, and the conditional variance of ln F_T is deterministic.
+  β is pooled across all outer scenarios (β ≈ 0.61), so estimating it adds
+  negligible bias. β is lower than phase 3's ~1 because fees, deaths and lapses
+  after t0 aren't in the put.
+
+**The nested-simulation bias.** With few inner paths, each V_i carries noise,
+and noise widens the loss distribution. The worst 5% of noisy losses contains
+scenarios that are only there because their noise was unlucky. So CTE is
+**biased upward**, and the bias shrinks like 1/N_inner. Measured:
+
+| Inner paths per outer | 8 | 32 | 128 | 512 | 2048 |
+|---|---|---|---|---|---|
+| CTE(95) bias, plain | +1,239 | +298 | +78 | +26 | +6.8 |
+| CTE(95) bias, with CV | +16 | +6.8 | +3.2 | +0.8 | -0.2 |
+
+Each 4x more inner paths cuts the plain bias about 4x: 1/N, not 1/sqrt(N).
+The control variate cuts the inner noise, so it cuts the bias too.
+
+**LSMC.**
+- Simulate many fit scenarios with only one antithetic pair of inner paths each.
+  Each target is a very noisy but *unbiased* value.
+- Regress the targets on basis functions of the state. Least squares fits the
+  conditional expectation, so noise in the targets averages out across
+  scenarios with similar states. The noisy targets explain only a small fraction
+  of their own variance (R² is low), which is expected and fine.
+- Two bases (`nested.basis`):
+  - **poly:** 1, m, m², m³, m⁴, x, x², mx, m²x, with m = ln(F/GM);
+  - **poly+put:** the same plus the closed-form t0 values of a put struck at GM
+    and one struck at GD. Feeding the regression a function that already has
+    the right shape is a standard trick.
+
+### 5.3 Results
+
+`results/nested/nested_study.txt`, plot `results/nested/nested.png`. Test set:
+8,192 real-world outer scenarios. Ground truth: 16,384 inner paths each,
+antithetic + CV. GT per-scenario noise: RMS SE 4.2 on values from -3,502 to
+11,730. GT CTE(95) = 5,305.89 with outer-sampling SE 88.42. Every cheaper method
+was repeated 8 times with fresh seeds; errors are on the same test scenarios, so
+outer noise cancels.
+
+| Method | Inner paths | RMSE of V | CTE(95) error, mean | CTE(95) error, RMS |
+|---|---|---|---|---|
+| brute force, 32 inner + CV | 262,144 | 95.8 | +6.8 | 11.4 |
+| brute force, 512 inner + CV | 4,194,304 | 24.1 | +0.8 | 1.9 |
+| brute force, 512 inner, plain | 4,194,304 | 195.3 | +26.1 | 27.4 |
+| LSMC poly, 2^20 fit | 2,097,152 | 33.9 | -24.1 | 27.3 |
+| LSMC poly+put, 2^16 fit | 131,072 | 28.9 | +5.5 | 22.3 |
+| LSMC poly+put, 2^20 fit | 2,097,152 | 8.1 | -7.8 | 11.4 |
+
+![nested](results/nested/nested.png)
+
+What it shows, honestly:
+1. **In this model, LSMC does not beat brute force with a control variate.**
+   With the put basis, LSMC needs 2.1M paths to reach the CTE(95) accuracy that
+   brute force + CV reaches with 262k. Two reasons:
+   - the state is low-dimensional and smooth, and the control variate captures
+     most of the inner noise;
+   - LSMC's error has two parts: regression noise and **basis
+     misspecification**. The second doesn't shrink with more fit scenarios.
+   LSMC beats *plain* brute force (11.4 at 2.1M paths vs 27.4 at 4.2M).
+2. **The basis is the model.** The poly-only basis stalls at a -24 to -30
+   CTE(95) bias however many scenarios it gets: polynomials in log-moneyness
+   can't bend like a put. Adding two closed-form put values fixed most of it.
+   This is the part of LSMC that needs actuarial judgement and validation.
+3. **LSMC is noisy between runs.** Poly+put with 2^18 fit scenarios had a
+   *larger* RMS CTE error (34.3) than with 2^16 (22.3). With 8 replications, run
+   to run variation is large. A proxy must be validated against out-of-sample
+   nested runs, not trusted from its fit statistics.
+4. **All of these errors are smaller than the CTE(95)'s own outer-sampling SE
+   (88).** With 8,192 outer scenarios the capital number is uncertain to about
+   ±$88 whatever the inner method. Past a point, better inner valuation buys
+   nothing; more outer scenarios do. That's where a proxy earns its keep: once
+   fitted, valuing a million outer scenarios with it is nearly free.
+
+When LSMC *does* win in practice:
+- the inner valuation is expensive (many policies, path-dependent riders,
+  dynamic hedging inside the inner loop);
+- there are many valuation dates or many outer scenarios;
+- no good control variate exists.
+
+A GPU moves the break-even point. Brute force that once took 46 CPU-minutes
+here takes under a second.
+
+### 5.4 Validation
+
+- **V13a:** with only a maturity guarantee and stochastic rates, each inner
+  value must equal the closed-form put at t0 given that scenario's (x, F).
+  64 outer states, z = -0.63.
+- **V13b, the tower property:** with *risk-neutral* outer scenarios, the average
+  nested loss must equal the time-0 PV, because the expectation of a future
+  expectation is today's expectation. This checks the whole two-layer pipeline
+  on the full contract (mortality, dynamic lapse, fees): z = +0.30 (CPU, 4,096
+  outers).
+  - A near miss: a GPU run with 65,536 outers gave z = +2.47. Twelve fresh
+    replications (262k or 65k outers, with and without CV) gave z from -1.20 to
+    +1.01, mean about -0.2. No bias, but it was worth checking before trusting.
+- **Exact segment composition:** running 0 → 12 steps, saving the state, and
+  restarting with the same random stream reproduces the uninterrupted run to
+  1e-11 (`tests/test_nested.py`).
+- **GPU vs CPU** on identical streams: outer states agree to 5e-7, and inner
+  values to 3.4e-5 of their SE (check V8e, 256 x 512, run during development;
+  `tests/test_gpu_equality.py` runs it too). `results/validation/phase2_gpu.txt`
+  has not been regenerated since V8e was added; that's a to-do for phase 6.
+
+### 5.5 What went wrong
+
+1. **The first timing column was wrong.** It reported each method's first
+   replication, which included the one-off Triton compile: "brute force 8 inner
+   + CV" showed 0.83 s instead of 7 ms. Now it's the median over replications.
+2. **I broke my own script with a PowerShell multi-line replace,** after phase 3
+   had already taught me not to, and committed it because the syntax check and
+   the commit were in one chained command. The next commit fixed it. Lesson:
+   check, *then* commit, as separate steps.
+3. **LSMC wall times are dominated by host work.** The put basis uses a
+   vectorised erfc in NumPy, about 1 s for 1M scenarios. It isn't the GPU.
+   It's worth knowing before reading the time column.
+
+### 5.6 Design decisions and alternatives
+
+- **One kernel for everything.** The fused kernel gained a step range, optional
+  per-path start states and end-state output (constexpr flags, so plain runs
+  compile to the same code as before). All phase 2-4 equality checks still pass.
+- **Pooled β** rather than one β per outer scenario: per-scenario β from 8 inner
+  pairs would be noisy and biased.
+- **Alternatives to LSMC:**
+  - *Replicating portfolios* (fit the liability with a portfolio of puts, like
+    our put basis taken to its conclusion);
+  - *curve fitting* on a few hundred accurate nested points;
+  - *Gaussian process / neural proxies.*
+  All have the same weakness: validation against out-of-sample nested runs is
+  what makes them trustworthy.
+- **Outer horizon of 1 year with monthly steps,** matching common one-year
+  capital horizons. The code takes any grid point (`--t0`).
+
+### 5.7 Interview questions (with model answers)
+
+1. **What is nested simulation and why is it expensive?**
+   Real-world outer scenarios to a future date, then in each one a risk-neutral
+   Monte Carlo valuation of the remaining liability. The cost is outer times
+   inner, e.g. 8,192 × 16,384 = 134M inner paths of 108 steps each, which is
+   about 46 minutes in my NumPy reference. On my GPU kernel it took under a
+   second, which changes the trade-off, but at portfolio scale it's still
+   expensive.
+
+2. **Why is CTE biased upward with few inner paths?**
+   Inner noise widens the loss distribution, and the tail is where that widening
+   shows. Scenarios enter the worst 5% because their noise was unlucky. The bias
+   falls like 1/N_inner: I measured +1,239, +298, +78, +26 and +7 for 8 to 2,048
+   inner paths. A control variate on the inner valuation cut it to +16 even at 8.
+
+3. **How does LSMC work, and what is its main risk?**
+   Use one noisy inner path pair per outer scenario and regress those noisy
+   values on basis functions of the state. Least squares averages the noise
+   across similar states. The main risk is the basis: if it can't represent the
+   true value function, the error doesn't go away with more data. My
+   polynomial-only basis stalled at about -$25 of CTE(95) bias; adding
+   closed-form put values fixed most of it. Always validate against independent
+   nested runs.
+
+4. **Your LSMC didn't beat brute force. Is LSMC useless?**
+   No. Here the state is two-dimensional and smooth, and I have a strong control
+   variate, so brute force is efficient, and the GPU makes it cheap. LSMC wins
+   when inner valuations are expensive, when you need many valuation dates or
+   millions of outer scenarios, or when no good control exists. My results also
+   show that all inner errors were below the CTE's own outer-sampling error,
+   which is the real argument for proxies: they make huge outer samples
+   affordable.
+
+5. **How did you validate the nested engine itself?**
+   Three ways. Closed form: inner values match the conditional put formula at t0
+   (z = -0.6). The tower property: risk-neutral outer scenarios must reproduce
+   the time-0 PV on the full contract (z = +0.3, and twelve replications to rule
+   out a borderline +2.47). An exactness test: stop at t0 and restart from the
+   saved state with the same random stream, and you reproduce the uninterrupted
+   path to 1e-11. Plus GPU = CPU on identical streams.
