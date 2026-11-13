@@ -81,6 +81,17 @@ class FlatCurve(YieldCurve):
         return np.full_like(np.asarray(t, dtype=np.float64), self.rate)
 
 
+@dataclass(frozen=True)
+class ShiftedCurve(YieldCurve):
+    """base curve with every zero rate moved by `shift` (a parallel shift, used for rho)."""
+
+    base: YieldCurve
+    shift: float
+
+    def zero_rate(self, t):
+        return self.base.zero_rate(t) + self.shift
+
+
 class InterpolatedZeroCurve(YieldCurve):
     """Zero rates given at knots; linear interpolation in z(t)*t (i.e. log-linear in P).
 

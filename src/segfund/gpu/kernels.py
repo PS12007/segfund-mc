@@ -141,9 +141,10 @@ def segfund_fused_kernel(
         qd = tl.load(row + 13)
         dep = tl.load(row + 14)
         rst = tl.load(row + 15)
+        fund_add = tl.load(row + 16)  # = dep, except the t=0 deposit times the fund shock
 
         # events at the start of the step (dep = 0 / rst = 0 on most steps)
-        F = F + dep
+        F = F + fund_add
         GM = GM + gmmb_pct * dep
         GD = GD + gmdb_pct * dep
         GM = tl.where(rst > 0.5, tl.maximum(GM, gmmb_pct * F), GM)
@@ -267,10 +268,6 @@ class FusedEngine:
 def results_from_buffer(out: torch.Tensor, n_paths: int) -> PathResults:
     a = out.view(N_OUT, n_paths).double().cpu().numpy()
     return PathResults(a[0] + a[1] - a[2], a[0], a[1], a[2], a[3], a[4], a[5], a[6])
-
-
-def simulate_fused(model: Model, n_paths: int, seed: int, path_offset: int = 0, **kw) -> PathResults:
-    return FusedEngine(model, **kw).simulate(n_paths, seed, path_offset)
 
 
 def philox_normals_gpu(n: int, step: int, seed: int, path_offset: int = 0, stream: int = P.STREAM_MAIN, fast_math: bool = False):

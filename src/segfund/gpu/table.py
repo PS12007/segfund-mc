@@ -16,7 +16,7 @@ from segfund.reference.engine import build_schedule
 COLS = (
     "decay", "Bh", "phi_int", "x_shift", "y_shift", "lnF_drift",
     "L00", "L10", "L11", "L20", "L21", "L22",
-    "h", "q_death", "deposit", "reset",
+    "h", "q_death", "deposit", "reset", "fund_add",
 )
 NCOL = len(COLS)
 C = {name: i for i, name in enumerate(COLS)}
@@ -57,6 +57,7 @@ def pack(model: Model) -> PackedModel:
     tab[:, C["q_death"]] = s.q_death
     tab[:, C["deposit"]] = s.deposits
     tab[:, C["reset"]] = s.resets.astype(np.float64)
+    tab[:, C["fund_add"]] = s.fund_adds
     c, lp = model.contract, model.lapse
     return PackedModel(
         table=tab,

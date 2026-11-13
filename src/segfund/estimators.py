@@ -59,10 +59,10 @@ def control_payoff(res: PathResults, model: Model) -> tuple[np.ndarray, float]:
     if model.measure != "risk_neutral":
         raise ValueError("the closed-form control mean is only valid under the risk-neutral measure")
     c = model.contract
-    F0 = c.initial_deposit
-    K = c.gmmb_pct * F0
-    X = res.discount_T * np.maximum(K - F0 * res.unit_T, 0.0)
-    EX = float(cf.hw_gbm_put(model.hw, model.equity, F0, K, c.maturity_years, c.mer))
+    K = c.gmmb_pct * c.initial_deposit
+    S0 = c.initial_deposit * model.fund_shock  # fund value just after the t=0 deposit
+    X = res.discount_T * np.maximum(K - S0 * res.unit_T, 0.0)
+    EX = float(cf.hw_gbm_put(model.hw, model.equity, S0, K, c.maturity_years, c.mer))
     return X, EX
 
 

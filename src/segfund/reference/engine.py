@@ -95,7 +95,8 @@ class Schedule:
 
     tab: StepTable
     q_death: np.ndarray
-    deposits: np.ndarray
+    deposits: np.ndarray  # added to the guarantee bases (times gmmb/gmdb pct)
+    fund_adds: np.ndarray  # added to the fund: deposits, with the t=0 one times model.fund_shock
     resets: np.ndarray
 
 
@@ -104,10 +105,21 @@ def build_schedule(model: Model) -> Schedule:
     times = model.time_grid()
     tab = build_step_table(model.hw, model.equity, times, c.mer, model.lambda_r)
     q_death = model.mortality.step_death_probs(c.issue_age, times) if model.mortality else np.zeros(tab.n_steps)
-    return Schedule(tab, q_death, _deposit_steps(model, times), _reset_steps(model, times))
+    deposits = _deposit_steps(model, times)
+    fund_adds = deposits.copy()
+    fund_adds[0] *= model.fund_shock
+    return Schedule(tab, q_death, deposits, fund_adds, _reset_steps(model, times))
 
 
-def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
+def simulate(model: Model, n_paths: int | None = None, rng=None, pathwise_delta: bool = False) -> PathResults:
+    """Simulate the contract. With pathwise_delta=True, also returns (results, dPV/dS0 per path).
+
+    Pathwise delta differentiates each path's PV with respect to the fund value S0
+    just after the t=0 deposit, holding the guarantee fixed. It is only exact when
+    every path's cash flows depend on S0 through F alone: single deposit, no
+    resets, no dynamic lapse (all checked). Then F_t = S0 * unit_t, so
+    d/dS0 max(G - F_t, 0) = -1{G > F_t} unit_t and d/dS0 (fee * F_t) = fee * unit_t.
+    """
     c = model.contract
     n = n_paths or model.sim.n_paths
     if rng is None:
@@ -122,6 +134,9 @@ def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
 
     sch = build_schedule(model)
     tab, q_death, deposits, resets = sch.tab, sch.q_death, sch.deposits, sch.resets
+    if pathwise_delta and (len(c.deposits) > 1 or resets.any() or model.lapse.enabled):
+        raise ValueError("pathwise delta needs a single deposit, no resets and no dynamic lapse")
+    dpv = np.zeros(n) if pathwise_delta else None
 
     x = np.zeros(n)
     U = np.ones(n)
@@ -137,7 +152,7 @@ def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
     for k in range(tab.n_steps):
         # 1. events at the start of the step
         if deposits[k] > 0:
-            F += deposits[k]
+            F += sch.fund_adds[k]
             G_M += c.gmmb_pct * deposits[k]
             G_D += c.gmdb_pct * deposits[k]
         if resets[k]:
@@ -159,10 +174,16 @@ def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
         deaths = l * q_death[k]
         pv_death += D * deaths * np.maximum(G_D - F, 0.0)
         pv_fee += D * l * c.guarantee_fee * tab.h[k] * F
+        if dpv is not None:
+            dpv += -D * deaths * (G_D > F) * U - D * l * c.guarantee_fee * tab.h[k] * U
         l = l * (1.0 - q_death[k]) * (1.0 - q_lapse)
 
     pv_mat += D * l * np.maximum(G_M - F, 0.0)
-    return PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U)
+    res = PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U)
+    if dpv is not None:
+        dpv += -D * l * (G_M > F) * U
+        return res, dpv
+    return res
 
 
 def simulate_rates(

@@ -40,6 +40,9 @@ class Model:
     mortality: GompertzMakeham | None  # None = mortality off
     lapse: DynamicLapse
     sim: SimulationSettings
+    # Instantaneous shock to the fund right after the t=0 deposit (1.01 = fund up 1%),
+    # with the guarantee left unchanged. Used for equity delta by bump-and-revalue.
+    fund_shock: float = 1.0
 
     def time_grid(self) -> np.ndarray:
         n = int(round(self.contract.maturity_years / self.sim.dt))
@@ -150,11 +153,38 @@ def model_from_dict(cfg: dict[str, Any], base_dir: Path | str = ".") -> Model:
     return Model(contract, hw, equity, measure, lambda_r, mortality, lapse, sim)
 
 
-def load_model(path: str | Path) -> Model:
+def load_config(path: str | Path) -> tuple[dict, Path]:
+    """Raw config dict plus the base directory relative data paths resolve against."""
     path = Path(path)
     with path.open(encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
     # Relative data paths (e.g. the BoC CSV) resolve against the project root if the
     # config lives in configs/, otherwise against the config's own folder.
     base = path.parent.parent if path.parent.name == "configs" else path.parent
+    return cfg, base
+
+
+def load_model(path: str | Path) -> Model:
+    cfg, base = load_config(path)
     return model_from_dict(cfg, base)
+
+
+def with_measure(cfg: dict, measure: str, base_dir: Path | str = ".") -> Model:
+    """Same contract and economy under the other measure (risk_neutral | real_world)."""
+    import copy
+
+    c = copy.deepcopy(cfg)
+    c["economy"]["measure"] = measure
+    return model_from_dict(c, base_dir)
+
+
+def bumped(model: Model, fund_shock: float = 1.0, rate_shift: float = 0.0) -> Model:
+    """Model with the fund shocked by a multiplier and/or the initial curve shifted in parallel."""
+    import dataclasses
+
+    from segfund.curves import ShiftedCurve
+
+    hw = model.hw
+    if rate_shift:
+        hw = HullWhite(ShiftedCurve(hw.curve, rate_shift), hw.a, hw.sigma)
+    return dataclasses.replace(model, hw=hw, fund_shock=model.fund_shock * fund_shock)

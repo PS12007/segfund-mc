@@ -89,7 +89,7 @@ def simulate_torch(
         row = [float(v) for v in tab[k]]  # python floats: keep tensor math in `dtype`
         dep = row[C["deposit"]]
         if dep > 0:
-            F += dep
+            F += row[C["fund_add"]]
             GM += pm.gmmb_pct * dep
             GD += pm.gmdb_pct * dep
         if row[C["reset"]] > 0.5:
