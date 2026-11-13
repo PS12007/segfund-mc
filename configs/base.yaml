@@ -1,0 +1,54 @@
+# Base contract. EVERY number here is an illustrative assumption for an
+# educational model, not a calibrated or approved assumption.
+
+contract:
+  note: "Illustrative 10-year seg fund, 75% maturity / 100% death guarantee"
+  issue_age: 55
+  deposits:
+    - {t: 0.0, amount: 100000}
+  maturity_years: 10
+  gmmb_pct: 0.75            # maturity guarantee as fraction of deposits
+  gmdb_pct: 1.00            # death guarantee as fraction of deposits
+  resets:
+    enabled: false
+    every_years: 1          # automatic ratchet G = max(G, pct * F) on anniversaries
+    min_years_to_maturity: 0
+  fees:
+    mer: 0.0225             # total MER, deducted continuously from the fund
+    guarantee_fee: 0.0040   # part of the MER the insurer keeps to pay for the guarantee
+
+economy:
+  measure: risk_neutral     # risk_neutral (valuation) | real_world (scenarios, CTE)
+  curve:
+    source: synthetic       # synthetic | flat | boc_csv
+    nelson_siegel: {beta0: 0.035, beta1: -0.010, beta2: 0.005, tau: 2.0}
+    # boc_csv: data/boc/<file you downloaded>.csv
+    # boc_date: "2026-10-29"
+  hull_white:
+    a: 0.05                 # mean reversion speed (assumption, not calibrated)
+    sigma: 0.010            # short-rate volatility (assumption, not calibrated)
+    market_price_of_risk: 0.0   # real-world only
+  equity:
+    sigma: 0.18
+    rho_equity_rate: -0.20
+    equity_risk_premium: 0.04   # real-world only
+
+decrements:
+  mortality:
+    enabled: true
+    model: gompertz_makeham
+    source: "Standard Ultimate Survival Model, Dickson, Hardy & Waters (AMLCR)"
+    A: 0.00022
+    B: 2.7e-6
+    c: 1.124
+  lapse:
+    enabled: true
+    base_annual: 0.05
+    k: 1.0
+    lo: 0.2
+    hi: 2.0
+
+simulation:
+  n_paths: 100000
+  dt: 0.0833333333333333    # monthly (1/12)
+  seed: 20261113
