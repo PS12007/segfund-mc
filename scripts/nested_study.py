@@ -82,6 +82,7 @@ def main():
         keys = results[0].keys()
         agg = {k: [r[k] for r in results] for k in keys}
         secs = float(np.median(times))  # median over reps: excludes the one-off Triton compile of a first call
+        row = dict(method=method, inner_paths=cost_paths, wall_s_median=secs, wall_s_reps=[float(t) for t in times],
                    rmse_value=float(np.mean(agg["rmse_net_of_gt_noise"])),
                    cte95_err_mean=float(np.mean(agg["cte95_error"])),
                    cte95_err_rms=float(np.sqrt(np.mean(np.square(agg["cte95_error"])))),
