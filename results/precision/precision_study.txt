@@ -1,0 +1,59 @@
+timestamp: 2026-11-13T03:12:56
+git_commit: 2505102-dirty
+python: 3.12.10
+numpy: 2.5.2
+platform: Windows-11-10.0.26200-SP0
+processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
+gpu: NVIDIA GeForce RTX 5060 Laptop GPU
+compute_capability: 12.0
+torch: 2.12.0+cu130
+torch_cuda: 13.0
+triton: 3.8.0
+gpu_static: {'name': 'NVIDIA GeForce RTX 5060 Laptop GPU', 'driver_version': '610.47', 'clocks.max.sm': '3090', 'power.limit': '[N/A]'}
+args: {'n_a': 500000, 'n_c': 4194304, 'max_log2': 26, 'seed': 31337}
+wall_s: 66.87136800000735
+
+PART A: per-path accuracy vs NumPy fp64, base contract, 500000 identical paths
+  FAST_MATH (tl.exp/log/sin/cos)
+    fund_T   max rel 3.16e-06  mean signed rel -7.40e-07
+    disc_T   max rel 4.74e-06  mean signed rel -1.56e-06
+    pv_net             mean diff +7.354e-04 (+8.1e-05 SE)  worst path 0.171
+    pv_fees            mean diff -5.647e-03 (-6.4e-03 SE)  worst path 0.046
+    pv_maturity_claims mean diff -4.624e-03 (-5.6e-04 SE)  worst path 0.168
+  default (libdevice)
+    fund_T   max rel 3.06e-06  mean signed rel +6.13e-07
+    disc_T   max rel 3.10e-06  mean signed rel +8.53e-07
+    pv_net             mean diff -2.058e-03 (-2.3e-04 SE)  worst path 0.157
+    pv_fees            mean diff +4.498e-04 (+5.1e-04 SE)  worst path 0.029
+    pv_maturity_claims mean diff -1.505e-03 (-1.8e-04 SE)  worst path 0.155
+  default + KAHAN (compensated int r and PV sums)
+    fund_T   max rel 3.06e-06  mean signed rel +6.13e-07
+    disc_T   max rel 8.48e-07  mean signed rel -3.80e-08
+    pv_net             mean diff -4.209e-03 (-4.6e-04 SE)  worst path 0.112
+    pv_fees            mean diff -6.902e-04 (-7.8e-04 SE)  worst path 0.029
+    pv_maturity_claims mean diff -4.626e-03 (-5.6e-04 SE)  worst path 0.110
+
+PART B: error of the portfolio MEAN from summing N fp32 per-path values (fused kernel, default math)
+  err = method mean - fp64 reference mean, in dollars per policy; SE = Monte Carlo standard error
+  pv_fees:
+             N     MC SE    sequential_fp32   kahan_lanes_fp32      pairwise_fp32     torch_fp32_gpu  torch_fp64acc_gpu
+         65536     2.448         +3.726e-03         +6.376e-05         +6.376e-05         +6.376e-05         +0.000e+00
+        262144     1.222         -1.455e-02         +1.034e-04         +1.034e-04         +1.034e-04         +0.000e+00
+       1048576     0.611         -5.316e-03         +5.479e-05         +5.479e-05         +5.479e-05         +0.000e+00
+       4194304     0.306         -1.828e-01         +5.919e-05         -1.849e-04         +5.919e-05         +0.000e+00
+      16777216     0.153         +6.124e+01         -6.031e-05         -6.031e-05         +1.838e-04         +0.000e+00
+      67108864     0.076         -1.413e+03         -1.886e-05         -1.886e-05         -1.886e-05         +0.000e+00
+  pv_net:
+             N     MC SE    sequential_fp32   kahan_lanes_fp32      pairwise_fp32     torch_fp32_gpu  torch_fp64acc_gpu
+         65536    25.154         +7.064e-04         -2.607e-05         -2.607e-05         +3.496e-05         +0.000e+00
+        262144    12.535         +9.084e-03         -1.038e-05         -1.038e-05         -1.038e-05         +0.000e+00
+       1048576     6.256         +2.923e-02         -1.023e-05         -1.023e-05         -1.023e-05         +0.000e+00
+       4194304     3.132         -1.021e-02         -1.932e-05         -1.932e-05         -1.932e-05         +0.000e+00
+      16777216     1.566         -9.798e-01         +2.461e-05         +2.461e-05         +2.461e-05         +0.000e+00
+      67108864     0.783         -1.235e+02         -1.221e-06         -1.221e-06         -1.221e-06         +0.000e+00
+  fp64 reference vs exact math.fsum (N <= 2^22): max |diff| of totals = 0.000e+00
+
+PART C: kernel cost, 4194304 paths, CUDA events, clock-gated
+  FAST_MATH (tl.exp/log/sin/cos): median 38.616 ms  CI95 [38.579, 38.826]  IQR 1.0%  reps 39  SM 1515-1515 MHz  (14 samples)  1.086e+08 paths/s  [NOT QUOTABLE: SM clock below 70% of max in window]
+  default (libdevice): median 41.890 ms  CI95 [41.590, 42.059]  IQR 1.6%  reps 36  SM 1515-1515 MHz  (14 samples)  1.001e+08 paths/s  [NOT QUOTABLE: SM clock below 70% of max in window]
+  default + KAHAN (compensated int r and PV sums): median 42.120 ms  CI95 [41.732, 42.406]  IQR 2.6%  reps 38  SM 1515-1515 MHz  (14 samples)  9.958e+07 paths/s  [NOT QUOTABLE: SM clock below 70% of max in window]

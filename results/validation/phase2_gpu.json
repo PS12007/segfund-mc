@@ -1,7 +1,7 @@
 {
   "meta": {
-    "timestamp": "2026-11-13T02:45:29",
-    "git_commit": "1d1feaf",
+    "timestamp": "2026-11-13T03:27:41",
+    "git_commit": "0d213d6",
     "python": "3.12.10",
     "numpy": "2.5.2",
     "platform": "Windows-11-10.0.26200-SP0",
@@ -13,7 +13,7 @@
     "triton": "3.8.0",
     "n_paths": 500000,
     "seed": 12345,
-    "wall_s": 203.82873090000066
+    "wall_s": 303.9605800999998
   },
   "checks": [
     {
@@ -88,7 +88,8 @@
       "max_rel": {
         "fund_T": 3.2429003439939474e-06,
         "discount_T": 3.1231453203813773e-06,
-        "inforce_T": 7.226225181580682e-06
+        "inforce_T": 7.226225181580682e-06,
+        "unit_T": 3.1206509388758653e-06
       },
       "tol": 0.00011999999999999999,
       "passed": true,
@@ -152,7 +153,8 @@
       "max_rel": {
         "fund_T": 3.2193964912258644e-06,
         "discount_T": 4.560810884108833e-06,
-        "inforce_T": 7.580592628003587e-06
+        "inforce_T": 7.580592628003587e-06,
+        "unit_T": 3.4584601949655894e-06
       },
       "tol": 0.00011999999999999999,
       "passed": true,
@@ -216,7 +218,8 @@
       "max_rel": {
         "fund_T": 3.2429003439939474e-06,
         "discount_T": 3.1231453203813773e-06,
-        "inforce_T": 7.226225181580682e-06
+        "inforce_T": 7.226225181580682e-06,
+        "unit_T": 3.1206509388758653e-06
       },
       "tol": 0.00011999999999999999,
       "passed": true,
@@ -277,7 +280,7 @@
     {
       "name": "V8c [PyTorch unfused fp64] per-path state rel. error, base (mortality, dynamic lapse, fee)",
       "kind": "tol",
-      "max_rel": 3.183274336708437e-15,
+      "max_rel": 3.812073715755939e-15,
       "tol": 1e-10,
       "passed": true
     },
@@ -287,7 +290,8 @@
       "max_rel": {
         "fund_T": 3.2503418183704565e-06,
         "discount_T": 3.1231453203813773e-06,
-        "inforce_T": 3.711963028503388e-06
+        "inforce_T": 3.711963028503388e-06,
+        "unit_T": 3.1206509388758653e-06
       },
       "tol": 0.00011999999999999999,
       "passed": true,
@@ -351,7 +355,8 @@
       "max_rel": {
         "fund_T": 2.9406248375085536e-06,
         "discount_T": 4.560810884108833e-06,
-        "inforce_T": 5.584592739014217e-06
+        "inforce_T": 5.584592739014217e-06,
+        "unit_T": 3.4584601949655894e-06
       },
       "tol": 0.00011999999999999999,
       "passed": true,
@@ -415,7 +420,8 @@
       "max_rel": {
         "fund_T": 2.9380060246697294e-06,
         "discount_T": 3.1231453203813773e-06,
-        "inforce_T": 3.711963028503388e-06
+        "inforce_T": 3.711963028503388e-06,
+        "unit_T": 3.1206509388758653e-06
       },
       "tol": 0.00011999999999999999,
       "passed": true,
@@ -476,7 +482,7 @@
     {
       "name": "V8c [PyTorch unfused fp64] per-path state rel. error, resets + second deposit at t=2",
       "kind": "tol",
-      "max_rel": 3.4910799647226167e-15,
+      "max_rel": 3.812073715755939e-15,
       "tol": 1e-10,
       "passed": true
     },
@@ -486,7 +492,8 @@
       "max_rel": {
         "fund_T": 5.4175526350460395e-06,
         "discount_T": 4.6964685514772054e-06,
-        "inforce_T": 1.4172504770064142e-05
+        "inforce_T": 1.4172504770064142e-05,
+        "unit_T": 5.4779116620543895e-06
       },
       "tol": 0.00023999999999999998,
       "passed": true,
@@ -550,7 +557,8 @@
       "max_rel": {
         "fund_T": 6.487354587072451e-06,
         "discount_T": 8.013258667732424e-06,
-        "inforce_T": 1.4393096239113752e-05
+        "inforce_T": 1.4393096239113752e-05,
+        "unit_T": 6.075865086469936e-06
       },
       "tol": 0.00023999999999999998,
       "passed": true,
@@ -614,7 +622,8 @@
       "max_rel": {
         "fund_T": 8.432411853150916e-06,
         "discount_T": 5.171144939994599e-06,
-        "inforce_T": 1.4172504770064142e-05
+        "inforce_T": 1.4172504770064142e-05,
+        "unit_T": 8.247381561282025e-06
       },
       "tol": 0.00023999999999999998,
       "passed": true,
@@ -675,9 +684,204 @@
     {
       "name": "V8c [PyTorch unfused fp64] per-path state rel. error, real-world, 20 years (240 steps)",
       "kind": "tol",
-      "max_rel": 5.244902107736619e-15,
+      "max_rel": 5.4906442273739274e-15,
       "tol": 1e-10,
       "passed": true
+    },
+    {
+      "name": "V8a [Triton fused fp32] per-path state rel. error, base, antithetic",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 3.190951046508312e-06,
+        "discount_T": 3.1801186660086304e-06,
+        "inforce_T": 7.253558843680196e-06,
+        "unit_T": 3.428207246141582e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_net, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 712.9354668941519,
+      "mean_cpu": 712.9354678597691,
+      "se_cpu": 9.057435407106416,
+      "diff": -9.656172323957435e-07,
+      "diff_over_se": -1.0661044644471052e-07,
+      "path_max_abs": 0.18409814412007108,
+      "path_mean_abs": 0.006582514054501984,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_maturity_claims, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 2995.383416470015,
+      "mean_cpu": 2995.383098418556,
+      "se_cpu": 8.214504646957813,
+      "diff": 0.0003180514590894745,
+      "diff_over_se": 3.871827611750914e-05,
+      "path_max_abs": 0.18144382089667488,
+      "path_mean_abs": 0.005304220049125472,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_death_claims, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 268.81022030682743,
+      "mean_cpu": 268.81023564080743,
+      "se_cpu": 0.4244487521768486,
+      "diff": -1.5333980002196768e-05,
+      "diff_over_se": -3.612681136074537e-05,
+      "path_max_abs": 0.004819438266395082,
+      "path_mean_abs": 0.00028215324835490115,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_fees, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 2551.2581698826903,
+      "mean_cpu": 2551.2578661995944,
+      "se_cpu": 0.8833699896730839,
+      "diff": 0.0003036830958080827,
+      "diff_over_se": 0.00034377791792595223,
+      "path_max_abs": 0.023634674298591563,
+      "path_mean_abs": 0.0014368423611186526,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8a [PyTorch unfused fp32] per-path state rel. error, base, antithetic",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 3.190951046508312e-06,
+        "discount_T": 3.1801186660086304e-06,
+        "inforce_T": 7.253558843680196e-06,
+        "unit_T": 3.428207246141582e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_net, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 712.9357403870308,
+      "mean_cpu": 712.9354678597691,
+      "se_cpu": 9.057435407106416,
+      "diff": 0.0002725272616999064,
+      "diff_over_se": 3.0088788873513016e-05,
+      "path_max_abs": 0.19630517537007108,
+      "path_mean_abs": 0.006584616198607148,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_maturity_claims, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 2995.383468812425,
+      "mean_cpu": 2995.383098418556,
+      "se_cpu": 8.214504646957813,
+      "diff": 0.00037039386870674207,
+      "diff_over_se": 4.509022571968657e-05,
+      "path_max_abs": 0.19316257089667488,
+      "path_mean_abs": 0.005318897490266145,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_death_claims, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 268.8102226749475,
+      "mean_cpu": 268.81023564080743,
+      "se_cpu": 0.4244487521768486,
+      "diff": -1.2965859923497192e-05,
+      "diff_over_se": -3.054752748594465e-05,
+      "path_max_abs": 0.0045107343164545455,
+      "path_mean_abs": 0.00028307388226483867,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_fees, base, antithetic",
+      "kind": "mean",
+      "mean_gpu": 2551.257951100342,
+      "mean_cpu": 2551.2578661995944,
+      "se_cpu": 0.8833699896730839,
+      "diff": 8.490074742439901e-05,
+      "diff_over_se": 9.611006533719686e-05,
+      "path_max_abs": 0.024611236798591563,
+      "path_mean_abs": 0.0013921440829310705,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8a [Triton fused fp32 KAHAN] per-path state rel. error, base",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 3.190951046508312e-06,
+        "discount_T": 8.368672626876824e-07,
+        "inforce_T": 7.253558843680196e-06,
+        "unit_T": 3.428207246141582e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32 KAHAN] pv_net, base",
+      "kind": "mean",
+      "mean_gpu": 719.8001735667272,
+      "mean_cpu": 719.8043350209293,
+      "se_cpu": 9.089671315276654,
+      "diff": -0.004161454202176174,
+      "diff_over_se": -0.0004578222971805571,
+      "path_max_abs": 0.13334993823809782,
+      "path_mean_abs": 0.007209787009401756,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32 KAHAN] pv_maturity_claims, base",
+      "kind": "mean",
+      "mean_gpu": 3002.1623820859136,
+      "mean_cpu": 3002.166965401145,
+      "se_cpu": 8.244998934439506,
+      "diff": -0.00458331523122979,
+      "diff_over_se": -0.0005558903363935199,
+      "path_max_abs": 0.12853196501600905,
+      "path_mean_abs": 0.005844124499242298,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32 KAHAN] pv_death_claims, base",
+      "kind": "mean",
+      "mean_gpu": 268.9265777801297,
+      "mean_cpu": 268.926849610297,
+      "se_cpu": 0.4252254259759267,
+      "diff": -0.00027183016726439746,
+      "diff_over_se": -0.0006392613203703077,
+      "path_max_abs": 0.003257719542148152,
+      "path_mean_abs": 0.00033290772605015524,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32 KAHAN] pv_fees, base",
+      "kind": "mean",
+      "mean_gpu": 2551.2887862993166,
+      "mean_cpu": 2551.289479990513,
+      "se_cpu": 0.8836063614966243,
+      "diff": -0.0006936911963748571,
+      "diff_over_se": -0.0007850681328277278,
+      "path_max_abs": 0.02941861015278846,
+      "path_mean_abs": 0.0012744176978414735,
+      "passed": true,
+      "gated": true
     }
   ],
   "timings": [
@@ -685,27 +889,27 @@
       "variant": "base (mortality, dynamic lapse, fee)",
       "n_paths": 500000,
       "n_steps": 120,
-      "numpy_fp64_s": 43.29836729999806,
-      "triton_fused_fp32_s": 0.029480500001227483,
-      "torch_unfused_fp32_s": 2.6650010000012117,
+      "numpy_fp64_s": 44.61459929999546,
+      "triton_fused_fp32_s": 0.033712199990986846,
+      "torch_unfused_fp32_s": 2.6781092999881366,
       "note": "single wall-clock run incl. host copies; NOT a benchmark (phase 6)"
     },
     {
       "variant": "resets + second deposit at t=2",
       "n_paths": 500000,
       "n_steps": 120,
-      "numpy_fp64_s": 46.37979400000768,
-      "triton_fused_fp32_s": 0.029545600002165884,
-      "torch_unfused_fp32_s": 2.4057644000131404,
+      "numpy_fp64_s": 44.27877639999497,
+      "triton_fused_fp32_s": 0.017162599993753247,
+      "torch_unfused_fp32_s": 2.5049252999888267,
       "note": "single wall-clock run incl. host copies; NOT a benchmark (phase 6)"
     },
     {
       "variant": "real-world, 20 years (240 steps)",
       "n_paths": 500000,
       "n_steps": 240,
-      "numpy_fp64_s": 86.64024049999716,
-      "triton_fused_fp32_s": 0.026540499995462596,
-      "torch_unfused_fp32_s": 5.03881569999794,
+      "numpy_fp64_s": 92.07132560000173,
+      "triton_fused_fp32_s": 0.027182599995285273,
+      "torch_unfused_fp32_s": 4.974475999988499,
       "note": "single wall-clock run incl. host copies; NOT a benchmark (phase 6)"
     }
   ]

@@ -1,14 +1,14 @@
 {
   "meta": {
-    "timestamp": "2026-11-13T02:36:11",
-    "git_commit": "4cfc39c",
+    "timestamp": "2026-11-13T03:22:37",
+    "git_commit": "0d213d6",
     "python": "3.12.10",
     "numpy": "2.5.2",
     "platform": "Windows-11-10.0.26200-SP0",
     "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
     "n_paths": 200000,
     "seed": 12345,
-    "wall_s": 264.7631110999937,
+    "wall_s": 319.629651500014,
     "rng": "Philox4x32-10 counter-based"
   },
   "checks": [
@@ -216,6 +216,49 @@
       "exact": 16635.095514863566,
       "z": 0.2265436738398142,
       "passed": true
+    },
+    {
+      "name": "V10a antithetic: GMMB 100% under HW rates (rho=-0.5) vs closed form",
+      "kind": "mc",
+      "mc": 11307.839170166957,
+      "se": 22.331614588026557,
+      "exact": 11282.998832052357,
+      "z": 1.1123395496856945,
+      "passed": true,
+      "vrf": 2.2815272313580626
+    },
+    {
+      "name": "V10 control variate (HW put): GMDB+GMMB with mortality (age 70) vs semi-analytic",
+      "kind": "mc",
+      "mc": 6945.440034465985,
+      "se": 2.8195212376161094,
+      "exact": 6944.794942313358,
+      "z": 0.2287949258977508,
+      "passed": true,
+      "vrf": 65.40883219855259,
+      "beta": 1.0042769106769942
+    },
+    {
+      "name": "V10 antithetic: GMDB+GMMB with mortality (age 70) vs semi-analytic",
+      "kind": "mc",
+      "mc": 6949.015250609753,
+      "se": 17.040454362216007,
+      "exact": 6944.794942313358,
+      "z": 0.24766407084501793,
+      "passed": true,
+      "vrf": 1.7907080862562588,
+      "beta": null
+    },
+    {
+      "name": "V10 antithetic + control variate: GMDB+GMMB with mortality (age 70) vs semi-analytic",
+      "kind": "mc",
+      "mc": 6946.982601078731,
+      "se": 1.610572766277329,
+      "exact": 6944.794942313358,
+      "z": 1.3583110376501748,
+      "passed": true,
+      "vrf": 200.45940334672648,
+      "beta": 0.9333555292837923
     }
   ]
 }

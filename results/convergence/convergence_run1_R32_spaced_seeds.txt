@@ -1,0 +1,65 @@
+timestamp: 2026-11-13T03:14:42
+git_commit: 2505102-dirty
+python: 3.12.10
+numpy: 2.5.2
+platform: Windows-11-10.0.26200-SP0
+processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
+gpu: NVIDIA GeForce RTX 5060 Laptop GPU
+compute_capability: 12.0
+torch: 2.12.0+cu130
+torch_cuda: 13.0
+triton: 3.8.0
+args: {'min_log2': 10, 'max_log2': 22, 'reps': 32, 'ref_log2': 25}
+wall_s: 30.224181300000055
+
+Base contract (risk-neutral), fused GPU kernel, 32 independent replications per N
+Reference: 33554432 paths antithetic + CV: 717.1497 (SE 0.1001)
+
+plain:
+          N  empirical err  mean reported SE  VRF vs plain
+       1024       166.1056          201.8102          1.00
+       4096        90.7875          100.0631          1.00
+      16384        44.0542           50.0832          1.00
+      65536        22.3705           25.0695          1.00
+     262144        12.6766           12.5291          1.00
+    1048576         8.5175            6.2624          1.00
+    4194304         3.5050            3.1331          1.00
+  slope of log(error) vs log(N): -0.452  95% CI [-0.490, -0.415]  contains -0.5: False
+  bias check at N=4194304: mean of 32 reps 718.3721 (SE 0.6196) vs reference: z = +1.95
+
+antithetic:
+          N  empirical err  mean reported SE  VRF vs plain
+       1024       149.6525          158.0086          1.23
+       4096        69.4822           78.1007          1.71
+      16384        50.0191           39.1347          0.78
+      65536        14.7570           19.5453          2.30
+     262144        10.4118            9.7792          1.48
+    1048576         4.4857            4.8872          3.61
+    4194304         2.4257            2.4449          2.09
+  slope of log(error) vs log(N): -0.500  95% CI [-0.563, -0.438]  contains -0.5: True
+  bias check at N=4194304: mean of 32 reps 717.4272 (SE 0.4288) vs reference: z = +0.63
+
+control variate:
+          N  empirical err  mean reported SE  VRF vs plain
+       1024        35.5193           31.2948         21.87
+       4096        15.5699           15.7468         34.00
+      16384         8.3052            7.8813         28.14
+      65536         2.6853            3.9455         69.40
+     262144         1.9544            1.9683         42.07
+    1048576         1.0656            0.9842         63.89
+    4194304         0.4886            0.4921         51.46
+  slope of log(error) vs log(N): -0.507  95% CI [-0.570, -0.443]  contains -0.5: True
+  bias check at N=4194304: mean of 32 reps 717.2486 (SE 0.0864) vs reference: z = +0.75
+
+antithetic + control variate:
+          N  empirical err  mean reported SE  VRF vs plain
+       1024        14.3954           18.2578        133.14
+       4096         9.1232            8.9740         99.03
+      16384         3.8241            4.5273        132.72
+      65536         2.1547            2.2667        107.79
+     262144         1.1290            1.1319        126.06
+    1048576         0.5110            0.5657        277.81
+    4194304         0.3915            0.2831         80.15
+  slope of log(error) vs log(N): -0.459  95% CI [-0.508, -0.409]  contains -0.5: True
+  bias check at N=4194304: mean of 32 reps 717.2597 (SE 0.0692) vs reference: z = +0.90
+

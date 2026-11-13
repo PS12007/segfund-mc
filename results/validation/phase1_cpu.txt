@@ -1,12 +1,12 @@
-timestamp: 2026-11-13T02:36:11
-git_commit: 4cfc39c
+timestamp: 2026-11-13T03:22:37
+git_commit: 0d213d6
 python: 3.12.10
 numpy: 2.5.2
 platform: Windows-11-10.0.26200-SP0
 processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
 n_paths: 200000
 seed: 12345
-wall_s: 264.7631110999937
+wall_s: 319.629651500014
 rng: Philox4x32-10 counter-based
 
 [PASS] V1 curve fit: model P(0,T) from step moments vs input curve, T = 1/12 .. 30
@@ -55,5 +55,13 @@ rng: Philox4x32-10 counter-based
         mc=14149.567  se=43.1  exact=14178.918  z=-0.68
 [PASS] V6 GMMB 100% under HW rates (sigma_r=1.5%, rho=+0.5) vs closed form
         mc=16646.655  se=51  exact=16635.096  z=+0.23
+[PASS] V10a antithetic: GMMB 100% under HW rates (rho=-0.5) vs closed form
+        mc=11307.839  se=22.3  exact=11282.999  z=+1.11  VRF=2.28
+[PASS] V10 control variate (HW put): GMDB+GMMB with mortality (age 70) vs semi-analytic
+        mc=6945.44  se=2.82  exact=6944.7949  z=+0.23  VRF=65.41  beta=1.004
+[PASS] V10 antithetic: GMDB+GMMB with mortality (age 70) vs semi-analytic
+        mc=6949.0153  se=17  exact=6944.7949  z=+0.25  VRF=1.79
+[PASS] V10 antithetic + control variate: GMDB+GMMB with mortality (age 70) vs semi-analytic
+        mc=6946.9826  se=1.61  exact=6944.7949  z=+1.36  VRF=200.46  beta=0.933
 
-23/23 passed (MC checks pass when |z| < 4.0)
+27/27 passed (MC checks pass when |z| < 4.0)
