@@ -163,6 +163,29 @@ def v8_phase3(n_paths: int, seed: int) -> list[dict]:
     return recs
 
 
+def v8_phase4(n_paths: int, seed: int) -> list[dict]:
+    """Bumped models (fund shock, shifted curve) on GPU vs CPU, plus GPU vs CPU delta/rho (informational)."""
+    from segfund.config import bumped
+    from segfund.risk import cpu_sim, delta, gpu_sim, rho
+
+    base = _load_cfg()
+    m = model_from_dict(base, DEFAULT_CONFIG.parents[1])
+    n_steps = m.time_grid().size - 1
+    recs = []
+    for label, mb in [("fund shock +1%", bumped(m, fund_shock=1.01)), ("curve +10bp", bumped(m, rate_shift=0.001))]:
+        recs += _compare(f"base, {label}", simulate(mb, n_paths, PhiloxNormals(seed)),
+                         FusedEngine(mb).simulate(n_paths, seed, antithetic=False), n_steps, "Triton fused fp32")
+    for name, fn, kw in [("delta h=1%", delta, {"h": 0.01}), ("delta h=0.1%", delta, {"h": 0.001}),
+                         ("rho 10bp", rho, {"shift": 0.001}), ("rho 1bp", rho, {"shift": 0.0001})]:
+        c = fn(cpu_sim, m, n_paths, seed + 1, **kw)
+        g = fn(gpu_sim, m, n_paths, seed + 1, **kw)
+        recs.append(dict(name=f"V8d [Triton fused fp32] {name} vs NumPy fp64, base, CRN", kind="mean",
+                         mean_gpu=g.value, mean_cpu=c.value, se_cpu=c.se, diff=g.value - c.value,
+                         diff_over_se=(g.value - c.value) / c.se, path_max_abs=float("nan"), path_mean_abs=float("nan"),
+                         passed=bool(abs(g.value - c.value) <= 0.01 * c.se), gated=False))
+    return recs
+
+
 def format_table(recs: list[dict]) -> str:
     lines = []
     for r in recs:

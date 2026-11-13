@@ -37,9 +37,15 @@ def test_partial_block_and_offset():
 
     m = load_model(DEFAULT_CONFIG)
     n, off = 1000 + 37, 123_456
-    g = FusedEngine(m, block=256).simulate(n, 99, path_offset=off)
+    g = FusedEngine(m, block=256).simulate(n, 99, path_offset=off, antithetic=False)
     c = simulate(m, n, PhiloxNormals(99, path_offset=off))
     assert np.max(np.abs(g.fund_T / c.fund_T - 1)) < 1e-4
+
+
+def test_v8_phase4_bumped_models():
+    from segfund.gpu.equality import v8_phase4
+
+    _assert_all(v8_phase4(n_paths=20_000, seed=779))
 
 
 def test_v8_phase3_antithetic_and_kahan():
