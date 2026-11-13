@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "timestamp": "2026-11-13T02:16:19",
+    "git_commit": "ecc7e28",
+    "python": "3.12.10",
+    "numpy": "2.5.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel"
+  },
+  "config": "configs/base.yaml",
+  "n_paths": 200000,
+  "engine": "numpy-fp64",
+  "wall_s": 5.073836199997459,
+  "results": {
+    "pv_net": {
+      "mean": 720.8155482010421,
+      "se": 14.369654257782758
+    },
+    "pv_maturity_claims": {
+      "mean": 3002.5665021765362,
+      "se": 13.036126870143537
+    },
+    "pv_death_claims": {
+      "mean": 269.17071341121755,
+      "se": 0.672604148127692
+    },
+    "pv_fees": {
+      "mean": 2550.9216673867118,
+      "se": 1.3992357906170705
+    }
+  }
+}

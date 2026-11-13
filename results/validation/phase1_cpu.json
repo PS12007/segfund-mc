@@ -1,0 +1,220 @@
+{
+  "meta": {
+    "timestamp": "2026-11-13T02:16:13",
+    "git_commit": "ecc7e28",
+    "python": "3.12.10",
+    "numpy": "2.5.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "n_paths": 200000,
+    "seed": 12345,
+    "wall_s": 67.64649610000197
+  },
+  "checks": [
+    {
+      "name": "V1 curve fit: model P(0,T) from step moments vs input curve, T = 1/12 .. 30",
+      "kind": "deterministic",
+      "max_rel_error": 1.1102230246251565e-15,
+      "tol": 1e-12,
+      "passed": true
+    },
+    {
+      "name": "V2a E[exp(-int_0^T r)] vs P(0,T), T=1",
+      "kind": "mc",
+      "mc": 0.9723661271082814,
+      "se": 1.2342084272688032e-05,
+      "exact": 0.9723566156319794,
+      "z": 0.7706539747960973,
+      "passed": true
+    },
+    {
+      "name": "V2a E[exp(-int_0^T r)] vs P(0,T), T=2",
+      "kind": "mc",
+      "mc": 0.9417736159194794,
+      "se": 3.3184952015148565e-05,
+      "exact": 0.9417645335842487,
+      "z": 0.2736883641273358,
+      "passed": true
+    },
+    {
+      "name": "V2a E[exp(-int_0^T r)] vs P(0,T), T=5",
+      "kind": "mc",
+      "mc": 0.8489983649658915,
+      "se": 0.00011214793839357794,
+      "exact": 0.8489383373743536,
+      "z": 0.5352536337068298,
+      "passed": true
+    },
+    {
+      "name": "V2a E[exp(-int_0^T r)] vs P(0,T), T=10",
+      "kind": "mc",
+      "mc": 0.7120765833762627,
+      "se": 0.000244820839362726,
+      "exact": 0.7119621834448023,
+      "z": 0.4672802027724685,
+      "passed": true
+    },
+    {
+      "name": "V2a E[exp(-int_0^T r)] vs P(0,T), T=20",
+      "kind": "mc",
+      "mc": 0.5016101589243613,
+      "se": 0.00042547731816678486,
+      "exact": 0.50157811850689,
+      "z": 0.0753046428170139,
+      "passed": true
+    },
+    {
+      "name": "V2a E[exp(-int_0^T r)] vs P(0,T), T=30",
+      "kind": "mc",
+      "mc": 0.35363778315587974,
+      "se": 0.0005015614577986899,
+      "exact": 0.3534546970959455,
+      "z": 0.3650321552572484,
+      "passed": true
+    },
+    {
+      "name": "V2b E[D(5) P(5,T|x5)] vs P(0,T), T=10",
+      "kind": "mc",
+      "mc": 0.7123991291080288,
+      "se": 0.00022545192328728633,
+      "exact": 0.7119621834448023,
+      "z": 1.9380879828188888,
+      "passed": true
+    },
+    {
+      "name": "V2b E[D(5) P(5,T|x5)] vs P(0,T), T=20",
+      "kind": "mc",
+      "mc": 0.5021761712457814,
+      "se": 0.0002977465903580918,
+      "exact": 0.50157811850689,
+      "z": 2.0085964315228284,
+      "passed": true
+    },
+    {
+      "name": "V2b E[D(5) P(5,T|x5)] vs P(0,T), T=30",
+      "kind": "mc",
+      "mc": 0.3539995055235825,
+      "se": 0.0002718974695964132,
+      "exact": 0.3534546970959455,
+      "z": 2.0037274655246593,
+      "passed": true
+    },
+    {
+      "name": "V2c inner MC P(5,10|x5=-0.01) vs closed form",
+      "kind": "mc",
+      "mc": 0.8695157715521186,
+      "se": 0.00011474174605347153,
+      "exact": 0.8694438155665523,
+      "z": 0.627112520431535,
+      "passed": true
+    },
+    {
+      "name": "V2c inner MC P(5,30|x5=-0.01) vs closed form",
+      "kind": "mc",
+      "mc": 0.4557306286318318,
+      "se": 0.0005122609199393313,
+      "exact": 0.4549546325461208,
+      "z": 1.514845375678665,
+      "passed": true
+    },
+    {
+      "name": "V2c inner MC P(5,10|x5=+0.01) vs closed form",
+      "kind": "mc",
+      "mc": 0.7958866573990455,
+      "se": 0.00010502561048158489,
+      "exact": 0.7958207945237462,
+      "z": 0.6271125204347512,
+      "passed": true
+    },
+    {
+      "name": "V2c inner MC P(5,30|x5=+0.01) vs closed form",
+      "kind": "mc",
+      "mc": 0.3425795272249528,
+      "se": 0.0003850741923918558,
+      "exact": 0.3419961993653149,
+      "z": 1.5148453756783635,
+      "passed": true
+    },
+    {
+      "name": "V3a E[D(T) F(T)] vs F0 exp(-mer T)",
+      "kind": "mc",
+      "mc": 79806.5488222349,
+      "se": 110.28421412759127,
+      "exact": 79851.62187593771,
+      "z": -0.40869905144055785,
+      "passed": true
+    },
+    {
+      "name": "V3b PV(fee income), no decrements, vs closed form",
+      "kind": "mc",
+      "mc": 3577.4755845039003,
+      "se": 2.678041704676652,
+      "exact": 3578.576875096141,
+      "z": -0.4112298140531386,
+      "passed": true
+    },
+    {
+      "name": "V4 GMMB 75% vs Black-Scholes put (r=0.03, q=MER)",
+      "kind": "mc",
+      "mc": 5880.596738192892,
+      "se": 22.439812550755857,
+      "exact": 5885.352799693659,
+      "z": -0.21194747014973245,
+      "passed": true
+    },
+    {
+      "name": "V4 GMMB 100% vs Black-Scholes put (r=0.03, q=MER)",
+      "kind": "mc",
+      "mc": 14503.870609795098,
+      "se": 38.150007942435955,
+      "exact": 14505.140583290124,
+      "z": -0.03328894444640406,
+      "passed": true
+    },
+    {
+      "name": "V4 GMMB 125% vs Black-Scholes put (r=0.03, q=MER)",
+      "kind": "mc",
+      "mc": 26342.103161859508,
+      "se": 52.70513000364519,
+      "exact": 26326.57419786322,
+      "z": 0.2946385673503245,
+      "passed": true
+    },
+    {
+      "name": "V5 GMDB+GMMB with mortality (age 70) vs semi-analytic sum of BS puts",
+      "kind": "mc",
+      "mc": 6972.975413799068,
+      "se": 22.770094918216383,
+      "exact": 6944.794942313358,
+      "z": 1.2376088719404108,
+      "passed": true
+    },
+    {
+      "name": "V6 GMMB 100% under HW rates (sigma_r=1.5%, rho=-0.5) vs closed form",
+      "kind": "mc",
+      "mc": 11240.100618045844,
+      "se": 33.571571316465075,
+      "exact": 11282.998832052357,
+      "z": -1.277813707381442,
+      "passed": true
+    },
+    {
+      "name": "V6 GMMB 100% under HW rates (sigma_r=1.5%, rho=+0.0) vs closed form",
+      "kind": "mc",
+      "mc": 14189.199454247942,
+      "se": 43.20115317970237,
+      "exact": 14178.91761460023,
+      "z": 0.23799919425630406,
+      "passed": true
+    },
+    {
+      "name": "V6 GMMB 100% under HW rates (sigma_r=1.5%, rho=+0.5) vs closed form",
+      "kind": "mc",
+      "mc": 16697.176029194266,
+      "se": 51.17673147773253,
+      "exact": 16635.095514863566,
+      "z": 1.213061337410977,
+      "passed": true
+    }
+  ]
+}
