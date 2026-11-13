@@ -33,7 +33,7 @@ from segfund.rng import philox as P
 from segfund.rng.philox import PhiloxNormals
 from segfund.validate import DEFAULT_CONFIG, _load_cfg
 
-FIELDS_STATE = ("fund_T", "discount_T", "inforce_T")
+FIELDS_STATE = ("fund_T", "discount_T", "inforce_T", "unit_T")
 FIELDS_PV = ("pv_net", "pv_maturity_claims", "pv_death_claims", "pv_fees")
 
 
@@ -125,13 +125,13 @@ def v8_engines(n_paths: int, seed: int) -> tuple[list[dict], list[dict]]:
         eng.simulate(1024, seed)  # compile / warm up
         torch.cuda.synchronize()
         t = time.perf_counter()
-        tri = eng.simulate(n_paths, seed)
+        tri = eng.simulate(n_paths, seed, antithetic=False)
         t_tri = time.perf_counter() - t
         t = time.perf_counter()
         th32 = simulate_torch(m, n_paths, seed, dtype=torch.float32)
         t_th = time.perf_counter() - t
         th64 = simulate_torch(m, n_paths, seed, dtype=torch.float64)
-        fast = FusedEngine(m, fast_math=True).simulate(n_paths, seed)
+        fast = FusedEngine(m, fast_math=True).simulate(n_paths, seed, antithetic=False)
         recs += _compare(name, cpu, tri, n_steps, "Triton fused fp32")
         recs += _compare(name, cpu, fast, n_steps, "Triton fused fp32 FAST_MATH, not gated", gated=False)
         recs += _compare(name, cpu, th32, n_steps, "PyTorch unfused fp32")
@@ -144,6 +144,23 @@ def v8_engines(n_paths: int, seed: int) -> tuple[list[dict], list[dict]]:
                             numpy_fp64_s=t_cpu, triton_fused_fp32_s=t_tri, torch_unfused_fp32_s=t_th,
                             note="single wall-clock run incl. host copies; NOT a benchmark (phase 6)"))
     return recs, timings
+
+
+def v8_phase3(n_paths: int, seed: int) -> list[dict]:
+    """Antithetic and Kahan variants of the fused kernel vs the fp64 reference (same tolerances)."""
+    base = _load_cfg()
+    m = model_from_dict(base, DEFAULT_CONFIG.parents[1])
+    n_steps = m.time_grid().size - 1
+    recs = []
+    cpu_anti = simulate(m, n_paths, PhiloxNormals(seed, antithetic_half=n_paths // 2))
+    tri_anti = FusedEngine(m).simulate(n_paths, seed, antithetic=True)
+    recs += _compare("base, antithetic", cpu_anti, tri_anti, n_steps, "Triton fused fp32")
+    th_anti = simulate_torch(m, n_paths, seed, antithetic_half=n_paths // 2)
+    recs += _compare("base, antithetic", cpu_anti, th_anti, n_steps, "PyTorch unfused fp32")
+    cpu = simulate(m, n_paths, PhiloxNormals(seed))
+    kah = FusedEngine(m, kahan=True).simulate(n_paths, seed, antithetic=False)
+    recs += _compare("base", cpu, kah, n_steps, "Triton fused fp32 KAHAN")
+    return recs
 
 
 def format_table(recs: list[dict]) -> str:

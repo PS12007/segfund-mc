@@ -5,7 +5,7 @@ guarantees, in-force, three cash-flow accumulators) lives in registers for all
 time steps. Random numbers are generated in-register from (path, step) with
 Philox. Per step the only memory traffic is one 16-float table row, which every
 path in the block shares and which stays in cache. At the end each path writes
-six floats. Memory traffic is O(paths), not O(paths x steps x state variables).
+seven floats. Memory traffic is O(paths), not O(paths x steps x state variables).
 
 Precision: all arithmetic is fp32. FAST_MATH=False (default) uses libdevice's
 correctly-rounded-ish exp/log/sin/cos. FAST_MATH=True uses tl.exp etc., which
@@ -29,7 +29,7 @@ from segfund.gpu.table import C, NCOL, pack
 from segfund.reference.engine import PathResults
 from segfund.rng import philox as P
 
-N_OUT = 6  # pv_mat, pv_death, pv_fee, F_T, D_T, l_T
+N_OUT = 7  # pv_mat, pv_death, pv_fee, F_T, D_T, l_T, unit_T
 
 
 @triton.jit
@@ -94,24 +94,34 @@ def philox_normals_kernel(out_ptr, n, path_offset, step, stream, seed, BLOCK: tl
 
 @triton.jit
 def segfund_fused_kernel(
-    tab_ptr, out_ptr, n_paths, path_offset, stream, seed, n_steps,
+    tab_ptr, out_ptr, n_paths, path_offset, stream, seed, n_steps, anti_half,
     gmmb_pct, gmdb_pct, gfee, lapse_haz, lapse_k, lapse_lo, lapse_hi,
-    BLOCK: tl.constexpr, NC: tl.constexpr, FAST: tl.constexpr,
+    BLOCK: tl.constexpr, NC: tl.constexpr, FAST: tl.constexpr, KAHAN: tl.constexpr,
 ):
     offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     mask = offs < n_paths
-    c0 = offs + path_offset
+    g = offs + path_offset
+    # antithetic pairing (rng.philox.antithetic_counter): second half reuses counters with -z
+    second = (anti_half > 0) & (g >= anti_half)
+    c0 = tl.where(second, g - anti_half, g)
+    sgn = tl.where(second, -1.0, 1.0)
     zero = offs * 0
     PI: tl.constexpr = 3.141592653589793
 
     x = tl.zeros([BLOCK], dtype=tl.float32)
     F = tl.zeros([BLOCK], dtype=tl.float32)
+    U = tl.full([BLOCK], 1.0, dtype=tl.float32)
     GM = tl.zeros([BLOCK], dtype=tl.float32)
     GD = tl.zeros([BLOCK], dtype=tl.float32)
     D = tl.full([BLOCK], 1.0, dtype=tl.float32)
     l = tl.full([BLOCK], 1.0, dtype=tl.float32)
     pv_death = tl.zeros([BLOCK], dtype=tl.float32)
     pv_fee = tl.zeros([BLOCK], dtype=tl.float32)
+    # Kahan compensation terms (only used when KAHAN): integrated rate and the two PV sums
+    I = tl.zeros([BLOCK], dtype=tl.float32)
+    cI = tl.zeros([BLOCK], dtype=tl.float32)
+    c_death = tl.zeros([BLOCK], dtype=tl.float32)
+    c_fee = tl.zeros([BLOCK], dtype=tl.float32)
 
     for k in range(n_steps):
         row = tab_ptr + k * NC
@@ -146,20 +156,37 @@ def segfund_fused_kernel(
         rad01 = tl.sqrt(-2.0 * _log(_u23(r0), FAST))
         a01 = PI * (2.0 * _u23(r1) - 1.0)
         rad2 = tl.sqrt(-2.0 * _log(_u23(r2), FAST))
-        z0 = -rad01 * _cos(a01, FAST)
-        z1 = -rad01 * _sin(a01, FAST)
-        z2 = -rad2 * _cos(PI * (2.0 * _u23(r3) - 1.0), FAST)
+        z0 = -rad01 * _cos(a01, FAST) * sgn
+        z1 = -rad01 * _sin(a01, FAST) * sgn
+        z2 = -rad2 * _cos(PI * (2.0 * _u23(r3) - 1.0), FAST) * sgn
         e0 = L00 * z0
         e1 = L10 * z0 + L11 * z1
         e2 = L20 * z0 + L21 * z1 + L22 * z2
 
         int_r = x * Bh + (y_shift + phi_int) + e1
         x = x * decay + x_shift + e0
-        F = F * _exp(int_r + lnF_drift + e2, FAST)
-        D = D * _exp(-int_r, FAST)
-
-        pv_death += D * (l * qd) * tl.maximum(GD - F, 0.0)
-        pv_fee += D * l * (gfee * h) * F
+        growth = _exp(int_r + lnF_drift + e2, FAST)
+        F = F * growth
+        U = U * growth
+        if KAHAN:
+            # discount factor from a compensated running sum of int r: D = exp(-I)
+            yI = int_r - cI
+            tI = I + yI
+            cI = (tI - I) - yI
+            I = tI
+            D = _exp(-I, FAST)
+            term = D * (l * qd) * tl.maximum(GD - F, 0.0) - c_death
+            t = pv_death + term
+            c_death = (t - pv_death) - term
+            pv_death = t
+            term = D * l * (gfee * h) * F - c_fee
+            t = pv_fee + term
+            c_fee = (t - pv_fee) - term
+            pv_fee = t
+        else:
+            D = D * _exp(-int_r, FAST)
+            pv_death += D * (l * qd) * tl.maximum(GD - F, 0.0)
+            pv_fee += D * l * (gfee * h) * F
         l = l * (1.0 - qd) * surv_lapse
 
     pv_mat = D * l * tl.maximum(GM - F, 0.0)
@@ -169,6 +196,7 @@ def segfund_fused_kernel(
     tl.store(out_ptr + 3 * n_paths + offs, F, mask=mask)
     tl.store(out_ptr + 4 * n_paths + offs, D, mask=mask)
     tl.store(out_ptr + 5 * n_paths + offs, l, mask=mask)
+    tl.store(out_ptr + 6 * n_paths + offs, U, mask=mask)
 
 
 def _check_range(n_paths: int, path_offset: int):
@@ -179,34 +207,66 @@ def _check_range(n_paths: int, path_offset: int):
 class FusedEngine:
     """Holds the packed table on the GPU so repeated launches (benchmarks) don't re-upload."""
 
-    def __init__(self, model: Model, block: int = 256, num_warps: int = 4, device: str = "cuda", fast_math: bool = False):
+    def __init__(
+        self,
+        model: Model,
+        block: int = 256,
+        num_warps: int = 4,
+        device: str = "cuda",
+        fast_math: bool = False,
+        kahan: bool = False,
+    ):
         import segfund.gpu  # noqa: F401  (sets CC / CUDA_PATH for triton-windows)
 
+        self.model = model
         self.pm = pack(model)
         self.table = torch.tensor(self.pm.table, dtype=torch.float32, device=device).contiguous()
         self.block = block
         self.num_warps = num_warps
         self.device = device
         self.fast_math = fast_math
+        self.kahan = kahan
 
-    def launch(self, out: torch.Tensor, n_paths: int, seed: int, path_offset: int = 0, stream: int = P.STREAM_MAIN):
+    def launch(
+        self,
+        out: torch.Tensor,
+        n_paths: int,
+        seed: int,
+        path_offset: int = 0,
+        stream: int = P.STREAM_MAIN,
+        antithetic_half: int = 0,
+    ):
         _check_range(n_paths, path_offset)
         pm = self.pm
         grid = (triton.cdiv(n_paths, self.block),)
         segfund_fused_kernel[grid](
-            self.table, out, n_paths, path_offset, stream, seed, pm.n_steps,
+            self.table, out, n_paths, path_offset, stream, seed, pm.n_steps, antithetic_half,
             pm.gmmb_pct, pm.gmdb_pct, pm.guarantee_fee, pm.lapse_hazard, pm.lapse_k, pm.lapse_lo, pm.lapse_hi,
-            BLOCK=self.block, NC=NCOL, FAST=self.fast_math, num_warps=self.num_warps,
+            BLOCK=self.block, NC=NCOL, FAST=self.fast_math, KAHAN=self.kahan, num_warps=self.num_warps,
         )
 
     def alloc(self, n_paths: int) -> torch.Tensor:
         return torch.empty(N_OUT * n_paths, dtype=torch.float32, device=self.device)
 
-    def simulate(self, n_paths: int, seed: int, path_offset: int = 0, stream: int = P.STREAM_MAIN) -> PathResults:
+    def simulate(
+        self,
+        n_paths: int,
+        seed: int,
+        path_offset: int = 0,
+        stream: int = P.STREAM_MAIN,
+        antithetic: bool | None = None,
+    ) -> PathResults:
+        anti = self.model.sim.antithetic if antithetic is None else antithetic
+        if anti and (n_paths % 2 or path_offset):
+            raise ValueError("antithetic runs need an even path count and path_offset = 0")
         out = self.alloc(n_paths)
-        self.launch(out, n_paths, seed, path_offset, stream)
-        a = out.view(N_OUT, n_paths).double().cpu().numpy()
-        return PathResults(a[0] + a[1] - a[2], a[0], a[1], a[2], a[3], a[4], a[5])
+        self.launch(out, n_paths, seed, path_offset, stream, n_paths // 2 if anti else 0)
+        return results_from_buffer(out, n_paths)
+
+
+def results_from_buffer(out: torch.Tensor, n_paths: int) -> PathResults:
+    a = out.view(N_OUT, n_paths).double().cpu().numpy()
+    return PathResults(a[0] + a[1] - a[2], a[0], a[1], a[2], a[3], a[4], a[5], a[6])
 
 
 def simulate_fused(model: Model, n_paths: int, seed: int, path_offset: int = 0, **kw) -> PathResults:

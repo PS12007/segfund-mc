@@ -40,3 +40,9 @@ def test_partial_block_and_offset():
     g = FusedEngine(m, block=256).simulate(n, 99, path_offset=off)
     c = simulate(m, n, PhiloxNormals(99, path_offset=off))
     assert np.max(np.abs(g.fund_T / c.fund_T - 1)) < 1e-4
+
+
+def test_v8_phase3_antithetic_and_kahan():
+    from segfund.gpu.equality import v8_phase3
+
+    _assert_all(v8_phase3(n_paths=20_000, seed=778))

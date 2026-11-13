@@ -70,12 +70,17 @@ def simulate_torch(
     stream: int = P.STREAM_MAIN,
     dtype=torch.float32,
     device: str = "cuda",
+    antithetic_half: int = 0,
 ) -> PathResults:
     pm = pack(model)
     tab = pm.table  # fp64 on host; each scalar is rounded to `dtype` when used with tensors
-    ids = torch.arange(path_offset, path_offset + n_paths, device=device, dtype=torch.int64)
+    g = torch.arange(path_offset, path_offset + n_paths, device=device, dtype=torch.int64)
+    second = (g >= antithetic_half) if antithetic_half > 0 else torch.zeros_like(g, dtype=torch.bool)
+    ids = torch.where(second, g - antithetic_half, g)
+    sgn = torch.where(second, -1.0, 1.0).to(dtype)
     zeros = lambda: torch.zeros(n_paths, device=device, dtype=dtype)  # noqa: E731
     x, F, GM, GD = zeros(), zeros(), zeros(), zeros()
+    U = torch.ones(n_paths, device=device, dtype=dtype)
     D = torch.ones(n_paths, device=device, dtype=dtype)
     l = torch.ones(n_paths, device=device, dtype=dtype)
     pv_death, pv_fee = zeros(), zeros()
@@ -95,12 +100,15 @@ def simulate_torch(
         surv_lapse = torch.exp(-pm.lapse_hazard * h * mult)
 
         z0, z1, z2 = normals3_torch(ids, k, seed, stream, dtype)
+        z0, z1, z2 = z0 * sgn, z1 * sgn, z2 * sgn
         e0 = row[C["L00"]] * z0
         e1 = row[C["L10"]] * z0 + row[C["L11"]] * z1
         e2 = row[C["L20"]] * z0 + row[C["L21"]] * z1 + row[C["L22"]] * z2
         int_r = x * row[C["Bh"]] + (row[C["y_shift"]] + row[C["phi_int"]]) + e1
         x = x * row[C["decay"]] + row[C["x_shift"]] + e0
-        F = F * torch.exp(int_r + row[C["lnF_drift"]] + e2)
+        growth = torch.exp(int_r + row[C["lnF_drift"]] + e2)
+        F = F * growth
+        U = U * growth
         D = D * torch.exp(-int_r)
 
         qd = float(row[C["q_death"]])
@@ -109,6 +117,6 @@ def simulate_torch(
         l = l * (1.0 - qd) * surv_lapse
 
     pv_mat = D * l * torch.clamp(GM - F, min=0.0)
-    out = [t.double().cpu().numpy() for t in (pv_mat, pv_death, pv_fee, F, D, l)]
-    pv_mat, pv_death, pv_fee, F, D, l = out
-    return PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l)
+    out = [t.double().cpu().numpy() for t in (pv_mat, pv_death, pv_fee, F, D, l, U)]
+    pv_mat, pv_death, pv_fee, F, D, l, U = out
+    return PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U)

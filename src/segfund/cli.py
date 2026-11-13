@@ -79,6 +79,7 @@ def cmd_validate(args) -> int:
         recs = E.v7_rng()
         v8, timings = E.v8_engines(args.paths, args.seed)
         recs += v8
+        recs += E.v8_phase3(args.paths, args.seed + 1)
         secs = time.perf_counter() - t0
         text = E.format_table(recs)
         text += "\n\nwall-clock (one run each, includes host copies; not a benchmark):\n" + "\n".join(
