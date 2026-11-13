@@ -120,8 +120,12 @@ The NumPy fp64 engine (`reference/engine.py`) loops over monthly time steps and
 keeps only the current state of each path. This is the same shape the GPU kernel
 will have. It is the ground truth for everything later.
 
-Validation output: `results/validation/phase1_cpu.txt` (200,000 paths per check,
-git commit ecc7e28). **23/23 checks passed.** Examples, copied from that file:
+Validation output at the end of phase 1: 200,000 paths per check, git commit
+ecc7e28, using NumPy's built-in (sequential) Philox generator. **23/23 checks
+passed.** That exact file is in history: `git show ecc7e28:results/validation/phase1_cpu.txt`.
+Since phase 2, `results/validation/phase1_cpu.txt` is regenerated with the
+counter-based stream. The numbers differ by Monte Carlo noise and it is still 23/23.
+Examples from the phase 1 run:
 
 | Check | MC | SE | Exact | z |
 |---|---|---|---|---|
@@ -212,3 +216,180 @@ more into it than that. The rate parameters aren't calibrated.
    measures. Mixing them is a classic error: a real-world expected value is not a
    price, and risk-neutral tails are not forecasts. Nested simulation (phase 5)
    needs both: real-world outer scenarios, risk-neutral valuation inside each.
+
+---
+
+## Phase 2: GPU kernels and equality checks
+
+### 2.1 Why fusion helps
+
+A GPU does arithmetic much faster than it can move data in and out of its memory
+(DRAM). Most simple Monte Carlo code is limited by memory traffic, not arithmetic.
+
+The **unfused** PyTorch engine (`gpu/torch_engine.py`) writes each time step as
+ordinary tensor operations: `x = x * decay + shift + e0`, `F = F * torch.exp(...)`,
+and so on. Each operation is a separate GPU kernel. It reads its input arrays
+(one value per path) from DRAM and writes its result back to DRAM. One time step
+is dozens of such kernels, and the Philox random-number code adds hundreds more
+(10 rounds of integer operations on int64 arrays). So every step makes many full
+passes over arrays of N paths.
+
+The **fused** Triton kernel (`gpu/kernels.py`) does the whole contract in one launch:
+- each program owns BLOCK = 256 paths;
+- their whole state stays in registers for all time steps: x, fund, discount
+  factor, two guarantee bases, in-force and two running cash-flow sums (the
+  maturity claim is computed at the end);
+- random numbers are generated in registers;
+- per step the only memory read is one 16-float row of the schedule table, which
+  every path in the block shares, so it comes from cache;
+- at the end each path writes 6 floats.
+
+For 500k paths that's 12 MB of output in total, whatever the number of steps.
+Memory traffic is O(paths), not O(paths × steps × operations).
+
+The one wall-clock reading so far (`results/validation/phase2_gpu.txt`, 500k
+paths, base contract) was about 43 s for NumPy, 2.7 s for unfused PyTorch and
+0.03 s for the fused kernel. **This is not a benchmark.** It's a single run that
+includes copying results to the host, with no warmup discipline and no clock
+check. Phase 6 does the timing properly, and it may change these ratios.
+
+### 2.2 Random-number design
+
+- **Counter-based Philox4x32-10.** Each random block is a pure function of
+  (path id, step, stream, seed). There is no shared state, so 10^6 threads need
+  no coordination, and path 17 at step 40 is the same on CPU and GPU, in any
+  batch size and any order.
+- **Known-answer tests.** The NumPy version matches the published Random123
+  reference vectors (`tests/test_philox.py`). Then Triton and PyTorch are
+  checked bit for bit against NumPy over 4,194,304 words in each of three cases
+  per engine (V7a): 0 mismatches, including the largest 64-bit seed and path
+  ids next to the int32 limit.
+- **Uniforms exact in fp32.** u = ((r >> 9) + 0.5) * 2^-23 needs at most 24
+  significant bits, so fp32 and fp64 hold *exactly* the same uniform. Any
+  GPU/CPU difference after that is pure floating-point math.
+- **Box-Muller** with the angle in [-pi, pi). One Philox call gives four words;
+  three normals are used per step and one word is discarded.
+- **PyTorch has no uint64.** A 32x32-bit product overflows int64, so the
+  PyTorch Philox splits numbers into 16-bit pieces ("limbs") to multiply.
+  It's slow, but it gives the same bits.
+
+### 2.3 fp32 vs fp64, and the error model
+
+GeForce cards run fp64 at a small fraction of fp32 speed (commonly quoted as
+1/64 for consumer parts; I haven't measured this card). So the kernel is fp32,
+which carries about 7 significant digits. The questions are how much error that
+causes and whether it matters.
+
+Before the full run I wrote down tolerances from a simple error budget
+(`gpu/equality.py` docstring):
+- **Normals:** fp32 Box-Muller with ~1e-6 sin/cos error times radius <= 5.77 ->
+  tolerance 1e-5.
+- **Per-path fund, discount, in-force:** a few fp32 roundings (6e-8 each) per
+  step, added up linearly over n steps -> relative tolerance 1e-6 * n
+  (1.2e-4 at 120 steps).
+- **Portfolio means:** the difference must be under 1% of the Monte Carlo
+  standard error, so precision cannot change any reported number.
+
+Results on 500k identical scenarios, base contract (`results/validation/phase2_gpu.txt`, commit 1d1feaf):
+
+| Quantity | Measured | Tolerance |
+|---|---|---|
+| Normals, max abs. difference | 8.89e-07 | 1e-5 |
+| Fund at T, max rel. difference (fused) | 3.24e-06 | 1.2e-4 |
+| Net PV mean: fused fp32 vs NumPy fp64 | 721.810695 vs 721.812716 (-2.2e-4 SE) | 1e-2 SE |
+| Net PV, worst single path | $0.187 on a $100,000 deposit | reported only |
+| PyTorch **fp64** on the GPU vs NumPy fp64 | 3.18e-15 relative | 1e-10 |
+
+The last row matters for interpretation. Running the same GPU algorithm in fp64
+reproduces NumPy to 15 digits, so every fp32 difference above is precision,
+not a logic error. 42/42 gated checks passed.
+
+Phase 3 adds compensated (Kahan) and pairwise summation and studies when they
+matter. Within one path, 120 to 360 terms in fp32 are not a problem (above).
+The risk is summing 10^6 to 10^8 path values into one mean.
+
+### 2.4 What went wrong
+
+1. **`tl.exp` is biased, and it failed a check.** The first GPU run
+   (`results/validation/phase2_gpu_run1_tl_exp_FAILED.txt`) failed V8b. The fused
+   kernel's 20-year fee PV was 4292.010 vs 4292.031 on the CPU: -1.1e-2 SE,
+   outside the 1e-2 SE limit.
+   - *Signs it was a bias:* the mean per-path error equalled the mean error
+     (every path off the same way), it grew with the number of steps, and the
+     PyTorch fp32 engine showed much less of it.
+   - *Measurement* (4M random arguments): `tl.exp`, which compiles to a fast
+     hardware approximation, is low by about 1.1e-8 per call relative to
+     `libdevice.exp` (what `torch.exp` uses). The kernel calls exp twice per step
+     on discount x fund, and fee income is proportional to that product.
+   - *Fix:* use libdevice functions by default. `FAST_MATH=True` is kept, and
+     its rows are still reported, ungated: they reproduce the failing number
+     exactly (4292.010430). After the fix the same quantity is off by
+     -2.5e-3 SE, the same as PyTorch fp32.
+   - *Lesson:* an error of 1e-8 per operation looks harmless, but if it always
+     goes the same way it adds up over hundreds of steps, while random rounding
+     errors partly cancel.
+2. **24-bit uniforms weren't exact in fp32.** The first design used
+   (r >> 8) + 0.5, which needs 25 significant bits. A unit test caught it before
+   any GPU code was written.
+3. **Triton couldn't find its compiler.** To avoid a 2.7 GB download, this venv
+   reuses the tritonkv venv's torch and triton through a `.pth` file. triton-windows
+   looks for its bundled TinyCC compiler and CUDA headers under the *running*
+   venv, missed them, and fell back to MSYS2 gcc, which can't handle `\\?\` paths.
+   Fix (`gpu/__init__.py`): set `CC` and `CUDA_PATH` to the copies inside the
+   triton package.
+4. **A shell edit broke `segfund run`.** A `sed` insertion lost its indentation.
+   No test imported the CLI, so it was only caught when generating results. There
+   are now CLI smoke tests.
+
+### 2.5 Design decisions and alternatives
+
+- **Unfused PyTorch as the baseline.** It's the most natural "just use PyTorch"
+  version. But its RNG is the expensive int64 Philox emulation, so a benchmark
+  against it partly measures RNG cost. Phase 6 will also time PyTorch with its
+  native `torch.randn` (different random numbers, so it can't be part of the
+  equality checks) to give a fair comparison.
+- **The schedule table** is in ordinary global memory, read through cache. The
+  alternative is to pass the per-step constants as kernel arguments, but there
+  are too many.
+- **32-bit path ids** cap a single run at 2^31 paths. That's far beyond what 8 GB
+  can do in one launch anyway.
+- **Output layout** is struct-of-arrays (all pv_mat values, then all pv_death...),
+  so the GPU writes contiguous memory.
+- **BLOCK = 256 and num_warps = 4 are not tuned yet.** That's phase 6.
+
+### 2.6 Interview questions (with model answers)
+
+1. **Why does a fused kernel beat a PyTorch implementation of the same math?**
+   Each PyTorch operation is a separate kernel that reads and writes whole
+   arrays in DRAM. A step is dozens of them, so the run is memory-bound. The fused
+   kernel keeps each path's state in registers for the whole simulation, generates
+   random numbers in place and writes only the final results. The work is the
+   same; the memory traffic drops from O(paths x steps x ops) to O(paths).
+
+2. **Why a counter-based RNG instead of a normal PRNG?**
+   A normal PRNG is a sequence, so parallel threads need separate streams or
+   skip-ahead, and results depend on how work is split. With Philox the number
+   for (path, step) is a pure function of those coordinates. That gives
+   reproducible results on any batch size or device, exact CPU/GPU comparison,
+   and common random numbers for sensitivities for free.
+
+3. **Your GPU runs fp32. How do you know the answer is right?**
+   I simulate the identical scenarios in fp64 NumPy and compare. I wrote error
+   bounds down beforehand. Per-path fund and discount factors agree to 3e-6
+   relative, and portfolio means to 2e-4 standard errors. I also run the same GPU
+   code in fp64 and get 1e-15 agreement, which proves the differences are
+   precision, not logic.
+
+4. **Tell me about a bug the validation caught.**
+   Triton's fast exp is biased by about 1e-8 per call. Over 240 steps that moved
+   a 20-year fee PV by 1.1% of a standard error, which failed my pre-set
+   tolerance. Every path was off in the same direction, which pointed to a bias,
+   not noise. I confirmed it by testing exp alone and switched to libdevice. The
+   failing run is kept in the repo.
+
+5. **Why not just use fp64 on the GPU?**
+   Consumer GPUs have very little fp64 throughput, so it would give up most of the
+   speed. The better approach is fp32 for the per-path arithmetic, where errors are
+   ~1e-6 and far below Monte Carlo noise, plus careful summation (Kahan, pairwise,
+   or fp64 for the final reduction) where many numbers are added together. That's
+   phase 3.
