@@ -270,6 +270,88 @@ def v10_variance_reduction(base: dict, n_paths: int, seed: int) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------------------------
+# V11: CTE estimator vs closed form (real-world lognormal fund, constant rate)
+# ------------------------------------------------------------------------------------
+
+
+def v11_cte(base: dict, n_paths: int, seed: int, rate: float = 0.03) -> list[dict]:
+    from segfund.risk import cte, cte_gbm_put_closed_form
+
+    out = []
+    for pct in (0.75, 1.00):
+        m = _plain(
+            base,
+            economy__measure="real_world",
+            economy__curve={"source": "flat", "flat_rate": rate},
+            economy__hull_white__sigma=0.0,
+            contract__gmmb_pct=pct,
+        )
+        c = m.contract
+        r = simulate(m, n_paths, PhiloxNormals(seed))
+        for alpha in (0.70, 0.95):
+            est = cte(r.pv_net, alpha)
+            exact, exact_var = cte_gbm_put_closed_form(
+                c.initial_deposit, pct * c.initial_deposit, c.maturity_years, rate, c.mer, m.equity.sigma, m.equity.erp, alpha
+            )
+            out.append(_mc_record(
+                f"V11 CTE({int(alpha * 100)}) of GMMB {int(pct * 100)}% loss, real-world GBM (erp={m.equity.erp}) vs closed form",
+                est.cte, est.se, exact, var_mc=est.var, var_exact=exact_var,
+            ))
+    return out
+
+
+# ------------------------------------------------------------------------------------
+# V12: sensitivities by common random numbers vs Black-Scholes; pathwise vs CRN
+# ------------------------------------------------------------------------------------
+
+
+def v12_sensitivities(base: dict, n_paths: int, seed: int, rate: float = 0.03) -> list[dict]:
+    """Delta and rho by CRN central differences vs the closed form with the *same* bump.
+
+    Comparing with the same finite difference of the exact price isolates Monte
+    Carlo error from the O(h^2) finite-difference error; the analytic derivative is
+    reported alongside so the size of that O(h^2) term is visible too.
+    """
+    from segfund.risk import bs_delta_rho, cpu_sim, delta, rho
+
+    out = []
+    m = _plain(base, economy__curve={"source": "flat", "flat_rate": rate}, economy__hull_white__sigma=0.0)
+    c = m.contract
+    S0, K, T, q, sig = c.initial_deposit, c.gmmb_pct * c.initial_deposit, c.maturity_years, c.mer, m.equity.sigma
+    bs = lambda s, rr: float(cf.bs_put(s, K, T, rr, q, sig))  # noqa: E731
+    d_an, r_an = bs_delta_rho(S0, K, T, rate, q, sig)
+
+    h = 0.01
+    dl = delta(cpu_sim, m, n_paths, seed, h=h)
+    fd = (bs(S0 * (1 + h), rate) - bs(S0 * (1 - h), rate)) / (2 * h * S0)
+    out.append(_mc_record(f"V12a delta (CRN, h={h:.0%}) GMMB 75%, constant rate vs BS finite difference",
+                          dl.value, dl.se, fd, analytic=d_an))
+    s = 0.001
+    rh = rho(cpu_sim, m, n_paths, seed + 1, shift=s)
+    fd = (bs(S0, rate + s) - bs(S0, rate - s)) / (2 * s) * 1e-4
+    out.append(_mc_record(f"V12b rho per 1bp (CRN, shift={s * 1e4:.0f}bp) GMMB 75%, constant rate vs BS finite difference",
+                          rh.value, rh.se, fd, analytic=r_an))
+
+    # pathwise vs CRN on a richer case: HW rates, mortality, fee income; no dynamic lapse
+    m2 = _variant(base, decrements__lapse__enabled=False)
+    res, dpv = simulate(m2, n_paths, PhiloxNormals(seed + 2), pathwise_delta=True)
+    hh = 0.001
+    from segfund.config import bumped
+
+    up = simulate(bumped(m2, fund_shock=1 + hh), n_paths, PhiloxNormals(seed + 2)).pv_net
+    dn = simulate(bumped(m2, fund_shock=1 - hh), n_paths, PhiloxNormals(seed + 2)).pv_net
+    crn = (up - dn) / (2 * hh * m2.contract.initial_deposit)
+    diff = dpv - crn
+    out.append(dict(
+        name="V12c pathwise delta vs CRN central difference (h=0.1%), HW rates + mortality + fees, same paths",
+        kind="mc", mc=float(dpv.mean()), se=float(dpv.std(ddof=1) / np.sqrt(n_paths)), exact=float(crn.mean()),
+        z=float(diff.mean() / (diff.std(ddof=1) / np.sqrt(n_paths))),
+        passed=bool(abs(diff.mean()) < Z_TOL * diff.std(ddof=1) / np.sqrt(n_paths)),
+    ))
+    return out
+
+
 def run_all(n_paths: int = 200_000, seed: int = 12345, config=DEFAULT_CONFIG) -> list[dict]:
     base = _load_cfg(config)
     recs = [v1_curve_fit(base)]
@@ -279,6 +361,8 @@ def run_all(n_paths: int = 200_000, seed: int = 12345, config=DEFAULT_CONFIG) ->
     recs.append(v5_gmdb(base, n_paths, seed + 30))
     recs += v6_hw_put(base, n_paths, seed + 40)
     recs += v10_variance_reduction(base, n_paths, seed + 50)
+    recs += v11_cte(base, n_paths, seed + 60)
+    recs += v12_sensitivities(base, n_paths, seed + 70)
     return recs
 
 
@@ -291,6 +375,8 @@ def format_table(recs: list[dict]) -> str:
                 f"[{flag}] {r['name']}\n        mc={r['mc']:.8g}  se={r['se']:.3g}  exact={r['exact']:.8g}  z={r['z']:+.2f}"
                 + (f"  VRF={r['vrf']:.2f}" if "vrf" in r else "")
                 + (f"  beta={r['beta']:.3f}" if r.get("beta") is not None else "")
+                + (f"  VaR mc={r['var_mc']:.6g} exact={r['var_exact']:.6g}" if "var_mc" in r else "")
+                + (f"  analytic={r['analytic']:.8g}" if "analytic" in r else "")
             )
         else:
             lines.append(f"[{flag}] {r['name']}\n        max_rel_error={r['max_rel_error']:.3g}  tol={r['tol']:.0e}")
