@@ -130,6 +130,17 @@ class ClockMonitor:
                 pass
 
 
+def cooldown(monitor: ClockMonitor | None, below_c: float = 70.0, max_seconds: float = 90.0) -> float:
+    """Idle until the GPU is below `below_c`, so one row's heat doesn't fail the next row's gate."""
+    t0 = time.time()
+    while monitor and monitor.available and time.time() - t0 < max_seconds:
+        s = monitor.latest()
+        if s is None or s["temp_c"] < below_c:
+            break
+        time.sleep(0.5)
+    return time.time() - t0
+
+
 @dataclass
 class Timing:
     label: str
@@ -151,18 +162,38 @@ def _bootstrap_median_ci(xs: np.ndarray, n_boot: int = 2000, seed: int = 0) -> t
     return float(np.percentile(meds, 2.5)), float(np.percentile(meds, 97.5))
 
 
-def ramp(fn, monitor: ClockMonitor | None, max_seconds: float = 5.0) -> dict:
-    """Run the workload until the SM clock reaches CLOCK_TARGET_FRAC of max (or time out)."""
+def ramp(fn, monitor: ClockMonitor | None, max_seconds: float = 45.0, hold_seconds: float = 1.0) -> dict:
+    """Run the workload until the SM clock has stayed >= CLOCK_TARGET_FRAC of max for
+    hold_seconds (or time out).
+
+    The timeout is long on purpose. Phase 6 found that this laptop (RTX 5060 Laptop,
+    performance mode, on AC) holds the GPU at ~1500 MHz / ~34 W for the first ~20 s
+    of sustained load and only then grants the full ~115 W (~2.7 GHz). The phase 3
+    ramp gave up after 5 s, so it timed the GPU in its low-power state. The driver
+    reports no throttle reason for that state; only the clock shows it.
+    """
     import torch
 
     t0 = time.time()
+    held_since = None
     while time.time() - t0 < max_seconds:
-        for _ in range(5):
+        tb = time.time()
+        while time.time() - tb < 0.05:  # keep the GPU busy between clock checks, even for tiny kernels
             fn()
-        torch.cuda.synchronize()
+            # Sync every call: launches are asynchronous, and without this the loop queued
+            # ~1000 launches per 50 ms "batch" (a 190 s ramp that heated the GPU to 87 C).
+            torch.cuda.synchronize()
         s = monitor.latest() if monitor and monitor.available else None
-        if s and monitor.max_sm and s["sm_mhz"] >= CLOCK_TARGET_FRAC * monitor.max_sm and time.time() - t0 > 0.5:
-            break
+        if not (s and monitor.max_sm):
+            if time.time() - t0 > 1.0:
+                break  # no monitor: nothing to wait for
+            continue
+        if s["sm_mhz"] >= CLOCK_TARGET_FRAC * monitor.max_sm:
+            held_since = held_since or time.time()
+            if time.time() - held_since >= hold_seconds:
+                break
+        else:
+            held_since = None
     s = monitor.latest() if monitor and monitor.available else None
     return {"seconds": time.time() - t0, "sm_mhz_after": s["sm_mhz"] if s else None}
 
@@ -171,7 +202,7 @@ def time_gpu(label: str, fn, monitor: ClockMonitor | None, min_reps: int = 20, m
     """Time fn() with CUDA events until both min_reps and min_seconds are reached."""
     import torch
 
-    ramp(fn, monitor)
+    ramp_info = ramp(fn, monitor)
     times = []
     t_start = time.time()
     while len(times) < min_reps or time.time() - t_start < min_seconds:
@@ -189,6 +220,7 @@ def time_gpu(label: str, fn, monitor: ClockMonitor | None, min_reps: int = 20, m
     q1, q3 = np.percentile(xs, [25, 75])
     iqr_frac = float((q3 - q1) / med) if med > 0 else float("inf")
     clocks = monitor.window(t_start, t_end) if monitor and monitor.available else {"stable": False, "n_samples": 0}
+    clocks["ramp_seconds"] = ramp_info["seconds"]
     reasons = []
     if not (monitor and monitor.available):
         reasons.append("no clock monitor")
