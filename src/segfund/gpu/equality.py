@@ -11,6 +11,8 @@ Pass criteria were written down from an fp32 error model *before* the full run
        times its loading (~5e-6 * 0.05); summed linearly over 120 steps that is ~5e-5.
   V8b  portfolio mean of each PV component: |mean_gpu - mean_cpu| <= 0.01 * SE.
        A precision error that small cannot change any reported number.
+  FAST_MATH kernel rows are reported but not gated: they exist to show the bias
+  of hardware-approximate exp (LEARNING.md 2.5).
   Per-path PV differences are reported in dollars (relative error is meaningless
   where claims and fees nearly cancel), not gated.
 """
@@ -86,7 +88,7 @@ def _variants(base: dict) -> dict[str, dict]:
     return v
 
 
-def _compare(name: str, cpu, gpu, n_steps: int, engine: str) -> list[dict]:
+def _compare(name: str, cpu, gpu, n_steps: int, engine: str, gated: bool = True) -> list[dict]:
     recs = []
     tol_state = 1e-6 * n_steps
     worst = {}
@@ -95,7 +97,7 @@ def _compare(name: str, cpu, gpu, n_steps: int, engine: str) -> list[dict]:
         worst[f] = float(np.max(np.abs(a - b) / np.abs(b)))
     recs.append(dict(name=f"V8a [{engine}] per-path state rel. error, {name}", kind="tol",
                      max_rel={k: v for k, v in worst.items()}, tol=tol_state,
-                     passed=bool(max(worst.values()) <= tol_state)))
+                     passed=bool(max(worst.values()) <= tol_state), gated=gated))
     for f in FIELDS_PV:
         a, b = getattr(gpu, f), getattr(cpu, f)
         mg, _ = mean_and_se(a)
@@ -105,7 +107,7 @@ def _compare(name: str, cpu, gpu, n_steps: int, engine: str) -> list[dict]:
             name=f"V8b [{engine}] {f}, {name}", kind="mean",
             mean_gpu=mg, mean_cpu=mc, se_cpu=se, diff=mg - mc, diff_over_se=(mg - mc) / se if se > 0 else 0.0,
             path_max_abs=float(d.max()), path_mean_abs=float(d.mean()),
-            passed=bool(abs(mg - mc) <= 0.01 * se),
+            passed=bool(abs(mg - mc) <= 0.01 * se), gated=gated,
         ))
     return recs
 
@@ -129,7 +131,9 @@ def v8_engines(n_paths: int, seed: int) -> tuple[list[dict], list[dict]]:
         th32 = simulate_torch(m, n_paths, seed, dtype=torch.float32)
         t_th = time.perf_counter() - t
         th64 = simulate_torch(m, n_paths, seed, dtype=torch.float64)
+        fast = FusedEngine(m, fast_math=True).simulate(n_paths, seed)
         recs += _compare(name, cpu, tri, n_steps, "Triton fused fp32")
+        recs += _compare(name, cpu, fast, n_steps, "Triton fused fp32 FAST_MATH, not gated", gated=False)
         recs += _compare(name, cpu, th32, n_steps, "PyTorch unfused fp32")
         # fp64 on the GPU: same algorithm, same numbers -> differences should be ~1e-12.
         # This separates "precision" from "logic" differences.
@@ -146,6 +150,8 @@ def format_table(recs: list[dict]) -> str:
     lines = []
     for r in recs:
         flag = "PASS" if r["passed"] else "FAIL"
+        if not r.get("gated", True):
+            flag = "info: " + ("within tol" if r["passed"] else "OUTSIDE tol")
         lines.append(f"[{flag}] {r['name']}")
         if r["kind"] == "exact":
             lines.append(f"        words={r['n_words']}  mismatches={r['mismatches']}")
@@ -162,6 +168,6 @@ def format_table(recs: list[dict]) -> str:
                 f"        gpu={r['mean_gpu']:.6f}  cpu={r['mean_cpu']:.6f}  diff={r['diff']:+.2e} ({r['diff_over_se']:+.1e} SE)"
                 f"  per-path |d| max={r['path_max_abs']:.2e} mean={r['path_mean_abs']:.2e}"
             )
-    n_pass = sum(r["passed"] for r in recs)
-    lines.append(f"\n{n_pass}/{len(recs)} passed")
+    g = [r for r in recs if r.get("gated", True)]
+    lines.append(f"\n{sum(r['passed'] for r in g)}/{len(g)} gated checks passed ({len(recs) - len(g)} informational rows not gated)")
     return "\n".join(lines)

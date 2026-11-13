@@ -7,9 +7,11 @@ Philox. Per step the only memory traffic is one 16-float table row, which every
 path in the block shares and which stays in cache. At the end each path writes
 six floats. Memory traffic is O(paths), not O(paths x steps x state variables).
 
-Precision: all arithmetic is fp32. tl.exp / tl.log / tl.sin / tl.cos compile to
-fast hardware approximations; phase 2 measures the resulting error against the
-fp64 reference (see segfund.gpu.equality).
+Precision: all arithmetic is fp32. FAST_MATH=False (default) uses libdevice's
+correctly-rounded-ish exp/log/sin/cos. FAST_MATH=True uses tl.exp etc., which
+compile to hardware approximations (ex2.approx...). Phase 2 found tl.exp is
+biased low by ~1.1e-8 per call; with two exp calls per step that biased the
+20-year fee PV by -1.1e-2 SE and failed V8b. See LEARNING.md section 2.5.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import numpy as np
 import torch
 import triton
 import triton.language as tl
+from triton.language.extra.cuda import libdevice
 
 from segfund.config import Model
 from segfund.gpu.table import C, NCOL, pack
@@ -30,12 +33,44 @@ N_OUT = 6  # pv_mat, pv_death, pv_fee, F_T, D_T, l_T
 
 
 @triton.jit
+def _exp(x, FAST: tl.constexpr):
+    if FAST:
+        return tl.exp(x)
+    else:
+        return libdevice.exp(x)
+
+
+@triton.jit
+def _log(x, FAST: tl.constexpr):
+    if FAST:
+        return tl.log(x)
+    else:
+        return libdevice.log(x)
+
+
+@triton.jit
+def _cos(x, FAST: tl.constexpr):
+    if FAST:
+        return tl.cos(x)
+    else:
+        return libdevice.cos(x)
+
+
+@triton.jit
+def _sin(x, FAST: tl.constexpr):
+    if FAST:
+        return tl.sin(x)
+    else:
+        return libdevice.sin(x)
+
+
+@triton.jit
 def _u23(r):
     return ((r >> 9).to(tl.float32) + 0.5) * 1.1920928955078125e-07  # 2^-23
 
 
 @triton.jit
-def philox_normals_kernel(out_ptr, n, path_offset, step, stream, seed, BLOCK: tl.constexpr):
+def philox_normals_kernel(out_ptr, n, path_offset, step, stream, seed, BLOCK: tl.constexpr, FAST: tl.constexpr):
     """Test helper: writes raw Philox words and the 3 normals for one step (SoA, 7 x n)."""
     offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     mask = offs < n
@@ -43,25 +78,25 @@ def philox_normals_kernel(out_ptr, n, path_offset, step, stream, seed, BLOCK: tl
     zero = offs * 0
     r0, r1, r2, r3 = tl.philox(seed, c0, zero + step, zero + stream, zero)
     PI: tl.constexpr = 3.141592653589793
-    rad01 = tl.sqrt(-2.0 * tl.log(_u23(r0)))
+    rad01 = tl.sqrt(-2.0 * _log(_u23(r0), FAST))
     a01 = PI * (2.0 * _u23(r1) - 1.0)
-    rad2 = tl.sqrt(-2.0 * tl.log(_u23(r2)))
+    rad2 = tl.sqrt(-2.0 * _log(_u23(r2), FAST))
     a2 = PI * (2.0 * _u23(r3) - 1.0)
     ip = out_ptr.to(tl.pointer_type(tl.int32))
     tl.store(ip + 0 * n + offs, r0.to(tl.int32, bitcast=True), mask=mask)
     tl.store(ip + 1 * n + offs, r1.to(tl.int32, bitcast=True), mask=mask)
     tl.store(ip + 2 * n + offs, r2.to(tl.int32, bitcast=True), mask=mask)
     tl.store(ip + 3 * n + offs, r3.to(tl.int32, bitcast=True), mask=mask)
-    tl.store(out_ptr + 4 * n + offs, -rad01 * tl.cos(a01), mask=mask)
-    tl.store(out_ptr + 5 * n + offs, -rad01 * tl.sin(a01), mask=mask)
-    tl.store(out_ptr + 6 * n + offs, -rad2 * tl.cos(a2), mask=mask)
+    tl.store(out_ptr + 4 * n + offs, -rad01 * _cos(a01, FAST), mask=mask)
+    tl.store(out_ptr + 5 * n + offs, -rad01 * _sin(a01, FAST), mask=mask)
+    tl.store(out_ptr + 6 * n + offs, -rad2 * _cos(a2, FAST), mask=mask)
 
 
 @triton.jit
 def segfund_fused_kernel(
     tab_ptr, out_ptr, n_paths, path_offset, stream, seed, n_steps,
     gmmb_pct, gmdb_pct, gfee, lapse_haz, lapse_k, lapse_lo, lapse_hi,
-    BLOCK: tl.constexpr, NC: tl.constexpr,
+    BLOCK: tl.constexpr, NC: tl.constexpr, FAST: tl.constexpr,
 ):
     offs = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
     mask = offs < n_paths
@@ -103,25 +138,25 @@ def segfund_fused_kernel(
         GD = GD + gmdb_pct * dep
         GM = tl.where(rst > 0.5, tl.maximum(GM, gmmb_pct * F), GM)
         GD = tl.where(rst > 0.5, tl.maximum(GD, gmdb_pct * F), GD)
-        mult = tl.minimum(tl.maximum(tl.exp(lapse_k * tl.log(F / GM)), lapse_lo), lapse_hi)
-        surv_lapse = tl.exp(-lapse_haz * h * mult)
+        mult = tl.minimum(tl.maximum(_exp(lapse_k * _log(F / GM, FAST), FAST), lapse_lo), lapse_hi)
+        surv_lapse = _exp(-lapse_haz * h * mult, FAST)
 
         # correlated shocks from in-register Philox normals
         r0, r1, r2, r3 = tl.philox(seed, c0, zero + k, zero + stream, zero)
-        rad01 = tl.sqrt(-2.0 * tl.log(_u23(r0)))
+        rad01 = tl.sqrt(-2.0 * _log(_u23(r0), FAST))
         a01 = PI * (2.0 * _u23(r1) - 1.0)
-        rad2 = tl.sqrt(-2.0 * tl.log(_u23(r2)))
-        z0 = -rad01 * tl.cos(a01)
-        z1 = -rad01 * tl.sin(a01)
-        z2 = -rad2 * tl.cos(PI * (2.0 * _u23(r3) - 1.0))
+        rad2 = tl.sqrt(-2.0 * _log(_u23(r2), FAST))
+        z0 = -rad01 * _cos(a01, FAST)
+        z1 = -rad01 * _sin(a01, FAST)
+        z2 = -rad2 * _cos(PI * (2.0 * _u23(r3) - 1.0), FAST)
         e0 = L00 * z0
         e1 = L10 * z0 + L11 * z1
         e2 = L20 * z0 + L21 * z1 + L22 * z2
 
         int_r = x * Bh + (y_shift + phi_int) + e1
         x = x * decay + x_shift + e0
-        F = F * tl.exp(int_r + lnF_drift + e2)
-        D = D * tl.exp(-int_r)
+        F = F * _exp(int_r + lnF_drift + e2, FAST)
+        D = D * _exp(-int_r, FAST)
 
         pv_death += D * (l * qd) * tl.maximum(GD - F, 0.0)
         pv_fee += D * l * (gfee * h) * F
@@ -144,7 +179,7 @@ def _check_range(n_paths: int, path_offset: int):
 class FusedEngine:
     """Holds the packed table on the GPU so repeated launches (benchmarks) don't re-upload."""
 
-    def __init__(self, model: Model, block: int = 256, num_warps: int = 4, device: str = "cuda"):
+    def __init__(self, model: Model, block: int = 256, num_warps: int = 4, device: str = "cuda", fast_math: bool = False):
         import segfund.gpu  # noqa: F401  (sets CC / CUDA_PATH for triton-windows)
 
         self.pm = pack(model)
@@ -152,6 +187,7 @@ class FusedEngine:
         self.block = block
         self.num_warps = num_warps
         self.device = device
+        self.fast_math = fast_math
 
     def launch(self, out: torch.Tensor, n_paths: int, seed: int, path_offset: int = 0, stream: int = P.STREAM_MAIN):
         _check_range(n_paths, path_offset)
@@ -160,7 +196,7 @@ class FusedEngine:
         segfund_fused_kernel[grid](
             self.table, out, n_paths, path_offset, stream, seed, pm.n_steps,
             pm.gmmb_pct, pm.gmdb_pct, pm.guarantee_fee, pm.lapse_hazard, pm.lapse_k, pm.lapse_lo, pm.lapse_hi,
-            BLOCK=self.block, NC=NCOL, num_warps=self.num_warps,
+            BLOCK=self.block, NC=NCOL, FAST=self.fast_math, num_warps=self.num_warps,
         )
 
     def alloc(self, n_paths: int) -> torch.Tensor:
@@ -177,14 +213,14 @@ def simulate_fused(model: Model, n_paths: int, seed: int, path_offset: int = 0, 
     return FusedEngine(model, **kw).simulate(n_paths, seed, path_offset)
 
 
-def philox_normals_gpu(n: int, step: int, seed: int, path_offset: int = 0, stream: int = P.STREAM_MAIN):
+def philox_normals_gpu(n: int, step: int, seed: int, path_offset: int = 0, stream: int = P.STREAM_MAIN, fast_math: bool = False):
     """Returns (raw uint32 words as int64 numpy (4, n), normals float64 numpy (3, n)) from the Triton RNG."""
     import segfund.gpu  # noqa: F401
 
     _check_range(n, path_offset)
     out = torch.empty(7 * n, dtype=torch.float32, device="cuda")
     BLOCK = 1024
-    philox_normals_kernel[(triton.cdiv(n, BLOCK),)](out, n, path_offset, step, stream, seed, BLOCK=BLOCK)
+    philox_normals_kernel[(triton.cdiv(n, BLOCK),)](out, n, path_offset, step, stream, seed, BLOCK=BLOCK, FAST=fast_math)
     raw = out.view(7, n)[:4].contiguous().view(torch.int32).cpu().numpy().astype(np.int64) & 0xFFFFFFFF
     z = out.view(7, n)[4:].double().cpu().numpy()
     return raw, z

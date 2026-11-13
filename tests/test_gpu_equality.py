@@ -8,7 +8,7 @@ pytestmark = pytest.mark.gpu
 def _assert_all(recs):
     from segfund.gpu.equality import format_table
 
-    bad = [r for r in recs if not r["passed"]]
+    bad = [r for r in recs if r.get("gated", True) and not r["passed"]]
     assert not bad, format_table(bad)
 
 

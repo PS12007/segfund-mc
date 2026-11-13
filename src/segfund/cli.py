@@ -98,7 +98,7 @@ def cmd_validate(args) -> int:
         meta = _meta() | dict(n_paths=args.paths, seed=args.seed, wall_s=secs, rng="Philox4x32-10 counter-based")
         _write(out_dir, "phase1_cpu", meta, text, checks=recs)
     print(f"wall time {secs:.1f} s")
-    return 0 if all(r["passed"] for r in recs) else 1
+    return 0 if all(r["passed"] for r in recs if r.get("gated", True)) else 1
 
 
 def cmd_not_yet(phase: int):
