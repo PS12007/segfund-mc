@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "timestamp": "2026-11-13T03:55:03",
+    "git_commit": "3712cd5-dirty",
+    "python": "3.12.10",
+    "numpy": "2.5.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "compute_capability": "12.0",
+    "torch": "2.12.0+cu130",
+    "torch_cuda": "13.0",
+    "triton": "3.8.0",
+    "args": {
+      "n": 1048576,
+      "reps": 32
+    },
+    "wall_s": 4.357464600005187
+  },
+  "cte_se_check": {
+    "cte70": {
+      "mean": 1128.8221121627378,
+      "empirical_sd": 11.928443068029196,
+      "mean_reported_se": 10.98682966884685,
+      "ratio": 0.9210615003305777,
+      "sd_uncertainty": 1.51491378455425
+    },
+    "cte95": {
+      "mean": 11608.826605805389,
+      "empirical_sd": 37.59683499502131,
+      "mean_reported_se": 33.55073014475707,
+      "ratio": 0.8923817696143826,
+      "sd_uncertainty": 4.774802819172913
+    }
+  },
+  "sensitivities": {
+    "delta": [
+      {
+        "bump": 0.001,
+        "value": -0.11404785510062242,
+        "se_crn": 9.057083997459282e-05,
+        "se_independent": 0.03459007495846261,
+        "se_ratio": 381.91182689887734
+      },
+      {
+        "bump": 0.01,
+        "value": -0.11406105777683508,
+        "se_crn": 8.971320522910438e-05,
+        "se_independent": 0.0034588965023734154,
+        "se_ratio": 38.555043190579205
+      },
+      {
+        "bump": 0.05,
+        "value": -0.11442403682665196,
+        "se_crn": 8.57782086834518e-05,
+        "se_independent": 0.0006912300241085885,
+        "se_ratio": 8.058340628905434
+      }
+    ],
+    "rho": [
+      {
+        "bump_bp": 1,
+        "value": -11.23953084608128,
+        "se_crn": 0.011445804049898537
+      },
+      {
+        "bump_bp": 10,
+        "value": -11.241252643063632,
+        "se_crn": 0.011378644198365137
+      },
+      {
+        "bump_bp": 50,
+        "value": -11.270931401976364,
+        "se_crn": 0.011065782130610614
+      }
+    ]
+  }
+}

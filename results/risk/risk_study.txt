@@ -1,0 +1,30 @@
+timestamp: 2026-11-13T03:55:03
+git_commit: 3712cd5-dirty
+python: 3.12.10
+numpy: 2.5.2
+platform: Windows-11-10.0.26200-SP0
+processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
+gpu: NVIDIA GeForce RTX 5060 Laptop GPU
+compute_capability: 12.0
+torch: 2.12.0+cu130
+torch_cuda: 13.0
+triton: 3.8.0
+args: {'n': 1048576, 'reps': 32}
+wall_s: 4.357464600005187
+
+Base contract, fused GPU kernel, N = 1048576 paths per run
+
+1. CTE standard error: 32 independent real-world replications
+   CTE(70): mean 1,128.82  empirical SD of estimates 11.928 (+/- 1.515)  mean Manistre-Hancock SE 10.987  ratio 0.92
+   CTE(95): mean 11,608.83  empirical SD of estimates 37.597 (+/- 4.775)  mean Manistre-Hancock SE 33.551  ratio 0.89
+
+2-3. Sensitivities (risk-neutral, antithetic), common random numbers unless stated.
+     One seed for every bump size, so differences between rows are finite-difference error, not noise.
+   delta h=  0.1%: -0.114048  SE(CRN) 0.000091  SE(independent seeds) 0.034590  -> CRN is 382x tighter
+   delta h=  1.0%: -0.114061  SE(CRN) 0.000090  SE(independent seeds) 0.003459  -> CRN is 39x tighter
+   delta h=  5.0%: -0.114424  SE(CRN) 0.000086  SE(independent seeds) 0.000691  -> CRN is 8x tighter
+   rho shift=  1bp: -11.2395 per bp  SE(CRN) 0.0114
+   rho shift= 10bp: -11.2413 per bp  SE(CRN) 0.0114
+   rho shift= 50bp: -11.2709 per bp  SE(CRN) 0.0111
+
+4. Real-world loss distribution (one run): mean -1,940.66, P(loss > 0) = 0.100, VaR95 5,662.79, CTE95 11,572.44, CTE70 1,118.08
