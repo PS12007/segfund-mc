@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from segfund.config import load_model, model_from_dict
-from segfund.reference.engine import NumpyNormals, simulate
+from segfund.reference.engine import simulate
+from segfund.rng.philox import PhiloxNormals
 from segfund.validate import DEFAULT_CONFIG, _load_cfg
 
 BASE = _load_cfg()
@@ -47,8 +48,8 @@ def test_maturity_must_be_whole_steps():
 
 def test_same_seed_same_answer():
     m = _m()
-    a = simulate(m, 2000, NumpyNormals(7)).pv_net
-    b = simulate(m, 2000, NumpyNormals(7)).pv_net
+    a = simulate(m, 2000, PhiloxNormals(7)).pv_net
+    b = simulate(m, 2000, PhiloxNormals(7)).pv_net
     assert np.array_equal(a, b)
 
 
@@ -56,16 +57,16 @@ def test_deterministic_when_no_volatility():
     m = _m(economy__hull_white__sigma=0.0, economy__equity__sigma=0.0,
            economy__curve={"source": "flat", "flat_rate": 0.03},
            decrements__mortality__enabled=False, decrements__lapse__enabled=False)
-    r = simulate(m, 10, NumpyNormals(1))
+    r = simulate(m, 10, PhiloxNormals(1))
     T, mer = m.contract.maturity_years, m.contract.mer
     assert np.allclose(r.fund_T, 100000 * np.exp((0.03 - mer) * T), rtol=1e-12)
     assert np.allclose(r.discount_T, np.exp(-0.03 * T), rtol=1e-12)
 
 
 def test_resets_never_lower_the_guarantee():
-    off = simulate(_m(), 20000, NumpyNormals(3))
+    off = simulate(_m(), 20000, PhiloxNormals(3))
     on = simulate(_m(contract__resets={"enabled": True, "every_years": 1, "min_years_to_maturity": 0}),
-                  20000, NumpyNormals(3))
+                  20000, PhiloxNormals(3))
     # Same random numbers: a ratchet can only raise G, so the maturity claim can only rise.
     assert np.all(on.pv_maturity_claims >= off.pv_maturity_claims - 1e-9)
     assert on.pv_maturity_claims.mean() > off.pv_maturity_claims.mean()
@@ -78,5 +79,5 @@ def test_later_deposit_must_be_on_grid():
 
 
 def test_inforce_decreases():
-    r = simulate(_m(), 1000, NumpyNormals(5))
+    r = simulate(_m(), 1000, PhiloxNormals(5))
     assert np.all((r.inforce_T > 0) & (r.inforce_T < 1))

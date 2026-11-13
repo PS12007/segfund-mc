@@ -21,13 +21,15 @@ import numpy as np
 
 from segfund.config import Model
 from segfund.models.equity import StepTable, build_step_table
+from segfund.rng.philox import PhiloxNormals
 
 
 class NumpyNormals:
     """Sequential standard normals from NumPy's Philox bit generator.
 
-    Phase 1 placeholder. Phase 2 replaces this with a counter-based Philox
-    implementation that is bit-identical to the Triton kernel's stream.
+    Used in phase 1 before the counter-based stream existed; kept so phase 1
+    results can be reproduced. The default RNG is now rng.philox.PhiloxNormals,
+    which the GPU kernels reproduce bit for bit.
     """
 
     def __init__(self, seed: int):
@@ -81,20 +83,36 @@ def _deposit_steps(model: Model, times: np.ndarray) -> np.ndarray:
     return amounts
 
 
-def simulate(model: Model, n_paths: int | None = None, rng=None, table: StepTable | None = None) -> PathResults:
+@dataclass(frozen=True)
+class Schedule:
+    """Everything deterministic per step: market table + decrement/deposit/reset schedule.
+
+    Shared by the CPU reference and the GPU engines so they apply the same model.
+    """
+
+    tab: StepTable
+    q_death: np.ndarray
+    deposits: np.ndarray
+    resets: np.ndarray
+
+
+def build_schedule(model: Model) -> Schedule:
+    c = model.contract
+    times = model.time_grid()
+    tab = build_step_table(model.hw, model.equity, times, c.mer, model.lambda_r)
+    q_death = model.mortality.step_death_probs(c.issue_age, times) if model.mortality else np.zeros(tab.n_steps)
+    return Schedule(tab, q_death, _deposit_steps(model, times), _reset_steps(model, times))
+
+
+def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
     c = model.contract
     n = n_paths or model.sim.n_paths
-    rng = rng or NumpyNormals(model.sim.seed)
+    rng = rng or PhiloxNormals(model.sim.seed)
     if model.sim.antithetic or model.sim.control_variate != "none" or model.sim.precision != "fp64":
-        raise NotImplementedError("antithetic / control variates / fp32 arrive in phases 2-3")
+        raise NotImplementedError("antithetic / control variates / fp32 arrive in phase 3")
 
-    times = model.time_grid()
-    tab = table or build_step_table(model.hw, model.equity, times, c.mer, model.lambda_r)
-    q_death = (
-        model.mortality.step_death_probs(c.issue_age, times) if model.mortality else np.zeros(tab.n_steps)
-    )
-    deposits = _deposit_steps(model, times)
-    resets = _reset_steps(model, times)
+    sch = build_schedule(model)
+    tab, q_death, deposits, resets = sch.tab, sch.q_death, sch.deposits, sch.resets
 
     x = np.zeros(n)
     D = np.ones(n)
@@ -149,7 +167,7 @@ def simulate_rates(
     Returns {step: (x, int_{t0}^{t_step} r)} for each requested step. Used by the
     bond-price validations and, later, by nested simulation.
     """
-    rng = rng or NumpyNormals(model.sim.seed)
+    rng = rng or PhiloxNormals(model.sim.seed)
     T = horizon if horizon is not None else model.contract.maturity_years
     nsteps = int(round((T - t0) / model.sim.dt))
     times = t0 + np.arange(nsteps + 1) * model.sim.dt

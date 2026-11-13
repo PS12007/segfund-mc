@@ -18,7 +18,8 @@ import yaml
 from segfund.config import Model, model_from_dict
 from segfund.models.equity import build_step_table
 from segfund.reference import closed_form as cf
-from segfund.reference.engine import NumpyNormals, mean_and_se, simulate, simulate_rates
+from segfund.reference.engine import mean_and_se, simulate, simulate_rates
+from segfund.rng.philox import PhiloxNormals
 
 Z_TOL = 4.0
 DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "configs" / "base.yaml"
@@ -102,7 +103,7 @@ def v2_zcb(base: dict, n_paths: int, seed: int) -> list[dict]:
     out = []
     maturities = [1, 2, 5, 10, 20, 30]
     steps = {int(round(T / dt)): T for T in maturities}
-    _, rec = simulate_rates(m, n_paths, steps.keys(), NumpyNormals(seed), horizon=30.0)
+    _, rec = simulate_rates(m, n_paths, steps.keys(), PhiloxNormals(seed), horizon=30.0)
     for k, T in steps.items():
         _, I = rec[k]
         mc, se = mean_and_se(np.exp(-I))
@@ -110,7 +111,7 @@ def v2_zcb(base: dict, n_paths: int, seed: int) -> list[dict]:
 
     # V2b: E[ exp(-int_0^5 r) * P(5, T | x_5) ] = P(0, T) checks the closed-form P(t,T)
     k5 = int(round(5 / dt))
-    _, rec = simulate_rates(m, n_paths, [k5], NumpyNormals(seed + 1), horizon=5.0)
+    _, rec = simulate_rates(m, n_paths, [k5], PhiloxNormals(seed + 1), horizon=5.0)
     x5, I5 = rec[k5]
     for T in [10, 20, 30]:
         mc, se = mean_and_se(np.exp(-I5) * m.hw.zcb(5.0, T, x5))
@@ -120,7 +121,7 @@ def v2_zcb(base: dict, n_paths: int, seed: int) -> list[dict]:
     for x0 in (-0.01, 0.01):
         for T in [10, 30]:
             kT = int(round((T - 5) / dt))
-            _, rec = simulate_rates(m, n_paths, [kT], NumpyNormals(seed + 2), t0=5.0, x0=x0, horizon=T)
+            _, rec = simulate_rates(m, n_paths, [kT], PhiloxNormals(seed + 2), t0=5.0, x0=x0, horizon=T)
             _, I = rec[kT]
             mc, se = mean_and_se(np.exp(-I))
             out.append(
@@ -137,7 +138,7 @@ def v2_zcb(base: dict, n_paths: int, seed: int) -> list[dict]:
 def v3_martingale(base: dict, n_paths: int, seed: int) -> list[dict]:
     m = _plain(base, contract__fees__guarantee_fee=0.0040)
     c = m.contract
-    r = simulate(m, n_paths, NumpyNormals(seed))
+    r = simulate(m, n_paths, PhiloxNormals(seed))
     T = c.maturity_years
     F0 = c.initial_deposit
     mc, se = mean_and_se(r.discount_T * r.fund_T)
@@ -165,7 +166,7 @@ def v4_black_scholes(base: dict, n_paths: int, seed: int, rate: float = 0.03) ->
             contract__gmmb_pct=pct,
         )
         c = m.contract
-        r = simulate(m, n_paths, NumpyNormals(seed))
+        r = simulate(m, n_paths, PhiloxNormals(seed))
         mc, se = mean_and_se(r.pv_net)
         exact = float(cf.bs_put(c.initial_deposit, pct * c.initial_deposit, c.maturity_years, rate, c.mer, m.equity.sigma))
         out.append(_mc_record(f"V4 GMMB {int(pct * 100)}% vs Black-Scholes put (r={rate}, q=MER)", mc, se, exact))
@@ -192,7 +193,7 @@ def v5_gmdb(base: dict, n_paths: int, seed: int, rate: float = 0.03) -> dict:
     exact = cf.gmdb_gmmb_constant_rate(
         F0, c.gmdb_pct * F0, c.gmmb_pct * F0, c.maturity_years, rate, c.mer, m.equity.sigma, q, times
     )
-    r = simulate(m, n_paths, NumpyNormals(seed))
+    r = simulate(m, n_paths, PhiloxNormals(seed))
     mc, se = mean_and_se(r.pv_net)
     return _mc_record("V5 GMDB+GMMB with mortality (age 70) vs semi-analytic sum of BS puts", mc, se, exact)
 
@@ -207,7 +208,7 @@ def v6_hw_put(base: dict, n_paths: int, seed: int) -> list[dict]:
     for rho in (-0.5, 0.0, 0.5):
         m = _plain(base, contract__gmmb_pct=1.0, economy__equity__rho_equity_rate=rho, economy__hull_white__sigma=0.015)
         c = m.contract
-        r = simulate(m, n_paths, NumpyNormals(seed))
+        r = simulate(m, n_paths, PhiloxNormals(seed))
         mc, se = mean_and_se(r.pv_net)
         exact = float(cf.hw_gbm_put(m.hw, m.equity, c.initial_deposit, c.initial_deposit, c.maturity_years, c.mer))
         out.append(_mc_record(f"V6 GMMB 100% under HW rates (sigma_r=1.5%, rho={rho:+.1f}) vs closed form", mc, se, exact))
