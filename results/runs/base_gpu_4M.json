@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "timestamp": "2026-11-13T04:15:53",
+    "git_commit": "cbbc7d2",
+    "python": "3.12.10",
+    "numpy": "2.5.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel"
+  },
+  "config": "configs\\base.yaml",
+  "engine": "gpu",
+  "n_paths": 4194304,
+  "seed": 20261113,
+  "wall_s": 5.156846899990342,
+  "pv": {
+    "mean": 717.8056661009375,
+    "se": 0.28285652088220054,
+    "n_paths": 4194304,
+    "n_independent": 2097152,
+    "antithetic": true,
+    "control": "hw_put",
+    "beta": 0.6284003465096083,
+    "corr_yx": 0.9932742534495196
+  },
+  "components": {
+    "pv_maturity_claims": {
+      "mean": 2997.414571622203,
+      "se": 2.432748352729283
+    },
+    "pv_death_claims": {
+      "mean": 269.04066751131245,
+      "se": 0.08628648213393769
+    },
+    "pv_fees": {
+      "mean": 2551.6028545372974,
+      "se": 0.09557655220112246
+    }
+  },
+  "real_world_mean": {
+    "mean": -1936.8528922981077,
+    "se": 1.7758978868806432
+  },
+  "cte": {
+    "cte70": {
+      "alpha": 0.7,
+      "cte": 1129.2222244355867,
+      "var": -2355.6263427734375,
+      "se": 5.493418931215249,
+      "k": 1258291,
+      "n": 4194304
+    },
+    "cte95": {
+      "alpha": 0.95,
+      "cte": 11615.583247537597,
+      "var": 5677.099258422852,
+      "se": 16.746482093909805,
+      "k": 209715,
+      "n": 4194304
+    }
+  },
+  "delta": {
+    "name": "delta",
+    "bump": 0.01,
+    "value": -0.1142984378101496,
+    "se": 4.479889083593111e-05,
+    "units": "PV dollars per dollar of fund value",
+    "pv_up": 603.3925959055612,
+    "pv_down": 831.9894715258604
+  },
+  "rho": {
+    "name": "rho",
+    "bump": 0.001,
+    "value": -11.24145189075035,
+    "se": 0.00568633560153749,
+    "units": "PV dollars per +1bp parallel shift",
+    "pv_up": 605.3796261955619,
+    "pv_down": 830.2086640105688
+  }
+}

@@ -1,12 +1,12 @@
-timestamp: 2026-11-13T03:22:37
-git_commit: 0d213d6
+timestamp: 2026-11-13T04:03:15
+git_commit: cbbc7d2
 python: 3.12.10
 numpy: 2.5.2
 platform: Windows-11-10.0.26200-SP0
 processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
 n_paths: 200000
 seed: 12345
-wall_s: 319.629651500014
+wall_s: 473.26475590000337
 rng: Philox4x32-10 counter-based
 
 [PASS] V1 curve fit: model P(0,T) from step moments vs input curve, T = 1/12 .. 30
@@ -63,5 +63,19 @@ rng: Philox4x32-10 counter-based
         mc=6949.0153  se=17  exact=6944.7949  z=+0.25  VRF=1.79
 [PASS] V10 antithetic + control variate: GMDB+GMMB with mortality (age 70) vs semi-analytic
         mc=6946.9826  se=1.61  exact=6944.7949  z=+1.36  VRF=200.46  beta=0.933
+[PASS] V11 CTE(70) of GMMB 75% loss, real-world GBM (erp=0.04) vs closed form
+        mc=6321.9587  se=43  exact=6272.6646  z=+1.15  VaR mc=0 exact=0
+[PASS] V11 CTE(95) of GMMB 75% loss, real-world GBM (erp=0.04) vs closed form
+        mc=23647.999  se=94.5  exact=23606.897  z=+0.44  VaR mc=15975.6 exact=15839.5
+[PASS] V11 CTE(70) of GMMB 100% loss, real-world GBM (erp=0.04) vs closed form
+        mc=19756.506  se=87.7  exact=19672.468  z=+0.96  VaR mc=0 exact=0
+[PASS] V11 CTE(95) of GMMB 100% loss, real-world GBM (erp=0.04) vs closed form
+        mc=42168.454  se=94.5  exact=42127.353  z=+0.44  VaR mc=34496 exact=34359.9
+[PASS] V12a delta (CRN, h=1%) GMMB 75%, constant rate vs BS finite difference
+        mc=-0.1426569  se=0.000442  exact=-0.1424103  z=-0.56  analytic=-0.14239432
+[PASS] V12b rho per 1bp (CRN, shift=10bp) GMMB 75%, constant rate vs BS finite difference
+        mc=-20.193269  se=0.0595  exact=-20.126718  z=-1.12  analytic=-20.124785
+[PASS] V12c pathwise delta vs CRN central difference (h=0.1%), HW rates + mortality + fees, same paths
+        mc=-0.1689303  se=0.000416  exact=-0.16891503  z=-1.21
 
-27/27 passed (MC checks pass when |z| < 4.0)
+34/34 passed (MC checks pass when |z| < 4.0)

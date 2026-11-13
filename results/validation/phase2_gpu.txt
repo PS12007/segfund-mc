@@ -1,5 +1,5 @@
-timestamp: 2026-11-13T03:27:41
-git_commit: 0d213d6
+timestamp: 2026-11-13T04:15:46
+git_commit: cbbc7d2
 python: 3.12.10
 numpy: 2.5.2
 platform: Windows-11-10.0.26200-SP0
@@ -11,7 +11,7 @@ torch_cuda: 13.0
 triton: 3.8.0
 n_paths: 500000
 seed: 12345
-wall_s: 303.9605800999998
+wall_s: 750.2245399999956
 
 [PASS] V7a Philox words, Triton == NumPy, seed=0x3039 step=0 paths=[0, 1048576)
         words=4194304  mismatches=0
@@ -157,10 +157,38 @@ wall_s: 303.9605800999998
         gpu=268.926578  cpu=268.926850  diff=-2.72e-04 (-6.4e-04 SE)  per-path |d| max=3.26e-03 mean=3.33e-04
 [PASS] V8b [Triton fused fp32 KAHAN] pv_fees, base
         gpu=2551.288786  cpu=2551.289480  diff=-6.94e-04 (-7.9e-04 SE)  per-path |d| max=2.94e-02 mean=1.27e-03
+[PASS] V8a [Triton fused fp32] per-path state rel. error, base, fund shock +1%
+        fund_T=2.99e-06  discount_T=3.20e-06  inforce_T=7.09e-06  unit_T=3.08e-06  tol=1.2e-04
+[PASS] V8b [Triton fused fp32] pv_net, base, fund shock +1%
+        gpu=614.695172  cpu=614.697246  diff=-2.07e-03 (-2.3e-04 SE)  per-path |d| max=1.50e-01 mean=6.73e-03
+[PASS] V8b [Triton fused fp32] pv_maturity_claims, base, fund shock +1%
+        gpu=2922.490924  cpu=2922.492564  diff=-1.64e-03 (-2.0e-04 SE)  per-path |d| max=1.47e-01 mean=5.35e-03
+[PASS] V8b [Triton fused fp32] pv_death_claims, base, fund shock +1%
+        gpu=261.123224  cpu=261.123340  diff=-1.16e-04 (-2.8e-04 SE)  per-path |d| max=4.28e-03 mean=2.89e-04
+[PASS] V8b [Triton fused fp32] pv_fees, base, fund shock +1%
+        gpu=2568.918976  cpu=2568.918659  diff=+3.17e-04 (+3.6e-04 SE)  per-path |d| max=2.10e-02 mean=1.45e-03
+[PASS] V8a [Triton fused fp32] per-path state rel. error, base, curve +10bp
+        fund_T=2.89e-06  discount_T=2.99e-06  inforce_T=7.03e-06  unit_T=3.06e-06  tol=1.2e-04
+[PASS] V8b [Triton fused fp32] pv_net, base, curve +10bp
+        gpu=616.721032  cpu=616.723125  diff=-2.09e-03 (-2.4e-04 SE)  per-path |d| max=1.71e-01 mean=6.66e-03
+[PASS] V8b [Triton fused fp32] pv_maturity_claims, base, curve +10bp
+        gpu=2900.790166  cpu=2900.791760  diff=-1.59e-03 (-2.0e-04 SE)  per-path |d| max=1.67e-01 mean=5.28e-03
+[PASS] V8b [Triton fused fp32] pv_death_claims, base, curve +10bp
+        gpu=264.056668  cpu=264.056779  diff=-1.11e-04 (-2.6e-04 SE)  per-path |d| max=4.77e-03 mean=2.89e-04
+[PASS] V8b [Triton fused fp32] pv_fees, base, curve +10bp
+        gpu=2548.125802  cpu=2548.125413  diff=+3.89e-04 (+4.4e-04 SE)  per-path |d| max=2.59e-02 mean=1.45e-03
+[info: within tol] V8d [Triton fused fp32] delta h=1% vs NumPy fp64, base, CRN
+        gpu=-0.114131  cpu=-0.114131  diff=-3.92e-08 (-2.2e-04 SE)  per-path |d| max=nan mean=nan
+[info: within tol] V8d [Triton fused fp32] delta h=0.1% vs NumPy fp64, base, CRN
+        gpu=-0.114118  cpu=-0.114118  diff=-4.54e-08 (-2.5e-04 SE)  per-path |d| max=nan mean=nan
+[info: within tol] V8d [Triton fused fp32] rho 10bp vs NumPy fp64, base, CRN
+        gpu=-11.225093  cpu=-11.225085  diff=-7.56e-06 (-3.3e-04 SE)  per-path |d| max=nan mean=nan
+[info: within tol] V8d [Triton fused fp32] rho 1bp vs NumPy fp64, base, CRN
+        gpu=-11.224082  cpu=-11.224076  diff=-5.41e-06 (-2.3e-04 SE)  per-path |d| max=nan mean=nan
 
-57/57 gated checks passed (15 informational rows not gated)
+67/67 gated checks passed (19 informational rows not gated)
 
 wall-clock (one run each, includes host copies; not a benchmark):
-  base (mortality, dynamic lapse, fee): numpy 44.61s | torch unfused 2.68s | triton fused 0.034s
-  resets + second deposit at t=2: numpy 44.28s | torch unfused 2.50s | triton fused 0.017s
-  real-world, 20 years (240 steps): numpy 92.07s | torch unfused 4.97s | triton fused 0.027s
+  base (mortality, dynamic lapse, fee): numpy 45.99s | torch unfused 2.84s | triton fused 0.013s
+  resets + second deposit at t=2: numpy 49.39s | torch unfused 3.16s | triton fused 0.027s
+  real-world, 20 years (240 steps): numpy 94.05s | torch unfused 5.12s | triton fused 0.030s

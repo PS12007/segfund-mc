@@ -1,14 +1,14 @@
 {
   "meta": {
-    "timestamp": "2026-11-13T03:22:37",
-    "git_commit": "0d213d6",
+    "timestamp": "2026-11-13T04:03:15",
+    "git_commit": "cbbc7d2",
     "python": "3.12.10",
     "numpy": "2.5.2",
     "platform": "Windows-11-10.0.26200-SP0",
     "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
     "n_paths": 200000,
     "seed": 12345,
-    "wall_s": 319.629651500014,
+    "wall_s": 473.26475590000337,
     "rng": "Philox4x32-10 counter-based"
   },
   "checks": [
@@ -259,6 +259,79 @@
       "passed": true,
       "vrf": 200.45940334672648,
       "beta": 0.9333555292837923
+    },
+    {
+      "name": "V11 CTE(70) of GMMB 75% loss, real-world GBM (erp=0.04) vs closed form",
+      "kind": "mc",
+      "mc": 6321.95870891132,
+      "se": 43.0349007020677,
+      "exact": 6272.664624820195,
+      "z": 1.145444355324298,
+      "passed": true,
+      "var_mc": 0.0,
+      "var_exact": 0.0
+    },
+    {
+      "name": "V11 CTE(95) of GMMB 75% loss, real-world GBM (erp=0.04) vs closed form",
+      "kind": "mc",
+      "mc": 23647.99880272586,
+      "se": 94.45224812362663,
+      "exact": 23606.89705021711,
+      "z": 0.43515907059142656,
+      "passed": true,
+      "var_mc": 15975.57039688677,
+      "var_exact": 15839.450069108543
+    },
+    {
+      "name": "V11 CTE(70) of GMMB 100% loss, real-world GBM (erp=0.04) vs closed form",
+      "kind": "mc",
+      "mc": 19756.506201891912,
+      "se": 87.67081666112745,
+      "exact": 19672.46810810153,
+      "z": 0.9585640580401332,
+      "passed": true,
+      "var_mc": 0.0,
+      "var_exact": 0.0
+    },
+    {
+      "name": "V11 CTE(95) of GMMB 100% loss, real-world GBM (erp=0.04) vs closed form",
+      "kind": "mc",
+      "mc": 42168.45431976875,
+      "se": 94.45224812362665,
+      "exact": 42127.35256726006,
+      "z": 0.43515907059084874,
+      "passed": true,
+      "var_mc": 34496.02591392966,
+      "var_exact": 34359.905586151486
+    },
+    {
+      "name": "V12a delta (CRN, h=1%) GMMB 75%, constant rate vs BS finite difference",
+      "kind": "mc",
+      "mc": -0.14265690071562925,
+      "se": 0.00044187930967717426,
+      "exact": -0.14241029687530135,
+      "z": -0.5580796270096126,
+      "passed": true,
+      "analytic": -0.14239432057172205
+    },
+    {
+      "name": "V12b rho per 1bp (CRN, shift=10bp) GMMB 75%, constant rate vs BS finite difference",
+      "kind": "mc",
+      "mc": -20.193269260654738,
+      "se": 0.05947474300316449,
+      "exact": -20.126717844429322,
+      "z": -1.118986192540159,
+      "passed": true,
+      "analytic": -20.12478485686587
+    },
+    {
+      "name": "V12c pathwise delta vs CRN central difference (h=0.1%), HW rates + mortality + fees, same paths",
+      "kind": "mc",
+      "mc": -0.16893029834580806,
+      "se": 0.0004156428769374136,
+      "exact": -0.1689150316460284,
+      "z": -1.2096441813593368,
+      "passed": true
     }
   ]
 }

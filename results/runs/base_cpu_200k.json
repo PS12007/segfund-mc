@@ -1,32 +1,79 @@
 {
   "meta": {
-    "timestamp": "2026-11-13T02:16:19",
-    "git_commit": "ecc7e28",
+    "timestamp": "2026-11-13T04:17:37",
+    "git_commit": "cbbc7d2",
     "python": "3.12.10",
     "numpy": "2.5.2",
     "platform": "Windows-11-10.0.26200-SP0",
     "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel"
   },
-  "config": "configs/base.yaml",
+  "config": "configs\\base.yaml",
+  "engine": "cpu",
   "n_paths": 200000,
-  "engine": "numpy-fp64",
-  "wall_s": 5.073836199997459,
-  "results": {
-    "pv_net": {
-      "mean": 720.8155482010421,
-      "se": 14.369654257782758
-    },
+  "seed": 20261113,
+  "wall_s": 102.3547605000058,
+  "pv": {
+    "mean": 717.9626614742893,
+    "se": 1.2927531713793854,
+    "n_paths": 200000,
+    "n_independent": 100000,
+    "antithetic": true,
+    "control": "hw_put",
+    "beta": 0.6285080199001467,
+    "corr_yx": 0.9932756468613174
+  },
+  "components": {
     "pv_maturity_claims": {
-      "mean": 3002.5665021765362,
-      "se": 13.036126870143537
+      "mean": 2997.772591131913,
+      "se": 11.117516238172259
     },
     "pv_death_claims": {
-      "mean": 269.17071341121755,
-      "se": 0.672604148127692
+      "mean": 269.3697798686386,
+      "se": 0.3955548580584351
     },
     "pv_fees": {
-      "mean": 2550.9216673867118,
-      "se": 1.3992357906170705
+      "mean": 2551.609068384956,
+      "se": 0.4354300840281911
     }
+  },
+  "real_world_mean": {
+    "mean": -1944.0103235266579,
+    "se": 8.099182788570573
+  },
+  "cte": {
+    "cte70": {
+      "alpha": 0.7,
+      "cte": 1107.7027689272009,
+      "var": -2355.5026981264555,
+      "se": 25.038810470688137,
+      "k": 60000,
+      "n": 200000
+    },
+    "cte95": {
+      "alpha": 0.95,
+      "cte": 11556.045091462813,
+      "var": 5586.958878621731,
+      "se": 76.84124712498456,
+      "k": 10000,
+      "n": 200000
+    }
+  },
+  "delta": {
+    "name": "delta",
+    "bump": 0.01,
+    "value": -0.1143497426375141,
+    "se": 0.0002049699590311528,
+    "units": "PV dollars per dollar of fund value",
+    "pv_up": 604.4101222100265,
+    "pv_down": 833.1096074850548
+  },
+  "rho": {
+    "name": "rho",
+    "bump": 0.001,
+    "value": -11.23190351251533,
+    "se": 0.026065463492907642,
+    "units": "PV dollars per +1bp parallel shift",
+    "pv_up": 608.9794252384758,
+    "pv_down": 833.6174954887824
   }
 }
