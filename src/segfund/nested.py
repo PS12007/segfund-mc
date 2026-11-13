@@ -206,6 +206,33 @@ def inner_values(
     return InnerValues(v, se, n_inner, antithetic, control, beta, n_out * n_inner)
 
 
+def pair_targets(model_rn: Model, outer: OuterScenarios, seed: int, engine: str = "gpu") -> np.ndarray:
+    """LSMC fit targets: one antithetic pair of inner paths per outer scenario.
+
+    Each target is a very noisy but unbiased estimate of V at t0. The regression,
+    not the inner simulation, does the averaging.
+    """
+    n = outer.n * 2
+    if engine == "gpu":
+        import torch
+
+        from segfund.gpu.kernels import N_OUT, FusedEngine
+
+        eng = FusedEngine(model_rn)
+        st = torch.tensor(outer.state_matrix(), dtype=torch.float32, device="cuda").contiguous()
+        buf = eng.alloc(n)
+        eng.launch(buf, n, seed, stream=P.STREAM_INNER, antithetic_half=1, k_start=outer.k0, state=st, n_inner=2)
+        o = buf.view(N_OUT, n).double()
+        return (o[0] + o[1] - o[2]).view(outer.n, 2).mean(1).cpu().numpy()
+    from segfund.reference.engine import simulate
+    from segfund.rng.philox import PhiloxNormals
+
+    init = {k: np.repeat(v, 2) for k, v in zip(STATE_ROWS, outer.state_matrix())}
+    r = simulate(model_rn, n, PhiloxNormals(seed, stream=P.STREAM_INNER, antithetic_half=1), k_start=outer.k0,
+                 init_state=init)
+    return r.pv_net.reshape(outer.n, 2).mean(1)
+
+
 def losses(outer: OuterScenarios, v: np.ndarray) -> np.ndarray:
     """Loss as at time 0 per outer scenario: early cash flows + discounted value at t0."""
     return outer.pv_early + outer.D * v
