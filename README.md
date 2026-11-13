@@ -11,30 +11,67 @@ and its assumptions are illustrative.**
 
 ## Status
 
-Phases 1 to 3 of 6 are done:
+Phases 1 to 4 of 6 are done:
 1. CPU fp64 reference model and closed-form validation.
 2. GPU kernels (PyTorch unfused, Triton fused), counter-based RNG, and GPU vs CPU
    equality checks.
 3. Antithetic variates, a Hull-White put control variate, a convergence study and
    an fp32 precision study.
+4. Risk metrics: risk-neutral PV, real-world CTE(70)/CTE(95), and delta and rho
+   by common random numbers.
 
-Risk metrics, nested simulation/LSMC and benchmarks are not built yet.
+Nested simulation/LSMC and benchmarks are not built yet.
 **There are no quotable speed results yet.** The phase 3 timings all failed the
 clock gate: the laptop GPU was power-capped at 1,515 MHz, 49% of max.
 
+## Results
+
+Base contract (`configs/base.yaml`): age 55, 10 years, 75% maturity / 100% death
+guarantee, 2.25% MER of which 0.40% is the guarantee fee. **All assumptions are
+illustrative.** Output of `segfund run --config configs/base.yaml --engine gpu
+--paths 4194304`, raw in [`results/runs/base_gpu_4M.json`](results/runs/base_gpu_4M.json).
+A 200k-path CPU fp64 run ([`results/runs/base_cpu_200k.json`](results/runs/base_cpu_200k.json))
+agrees within its standard errors.
+
+| Per $100,000 deposited | Value | SE |
+|---|---|---|
+| Risk-neutral PV of claims minus fees | 717.81 | 0.28 |
+| Real-world mean PV of claims minus fees | −1,936.85 | 1.78 |
+| Real-world CTE(70) | 1,129.22 | 5.49 |
+| Real-world CTE(95) | 11,615.58 | 16.75 |
+| Delta (PV change per $ of fund value) | −0.11430 | 0.00004 |
+| Rho (PV change per +1bp parallel curve shift) | −11.2415 | 0.0057 |
+
+What these mean:
+- At hedging cost (risk-neutral), the 0.40% fee doesn't quite cover the guarantee.
+- Under real-world scenarios with a 4% equity risk premium, the insurer profits
+  in about 90% of scenarios ([`results/risk/risk_study.txt`](results/risk/risk_study.txt)),
+  but the worst 5% average an $11.6k loss.
+
+![loss distribution](results/risk/loss_hist.png)
+
 ## Validation
 
-**Closed forms (CPU fp64):** `segfund validate` runs 27 checks at 200,000 paths
-each: Hull-White bond prices, Black-Scholes, GMDB with mortality, a put under
-stochastic rates, and the antithetic / control-variate estimators. Raw output:
-[`results/validation/phase1_cpu.txt`](results/validation/phase1_cpu.txt). 27/27 pass;
-Monte Carlo checks pass when |MC − exact| < 4 standard errors.
+**Closed forms (CPU fp64):** `segfund validate` runs 34 checks at 200,000 paths
+each:
+- Hull-White bond prices, Black-Scholes, GMDB with mortality, a put under
+  stochastic rates;
+- the antithetic and control-variate estimators;
+- CTE(70)/(95) against a closed-form lognormal CTE;
+- delta and rho against Black-Scholes, and pathwise vs bump-and-revalue delta.
+
+Raw output: [`results/validation/phase1_cpu.txt`](results/validation/phase1_cpu.txt).
+34/34 pass; Monte Carlo checks pass when |MC − exact| < 4 standard errors.
+
+The CTE standard-error formula (Manistre–Hancock) was also checked against 32
+independent 1M-path replications. Its SEs are 0.89–0.92× the actual spread, which
+is within the ±13% uncertainty of that spread.
 
 **GPU vs CPU on identical scenarios:** `segfund validate --gpu`. Raw output:
 [`results/validation/phase2_gpu.txt`](results/validation/phase2_gpu.txt).
-57/57 gated checks pass on an RTX 5060 Laptop GPU, 500,000 paths, three contract
-variants plus antithetic and Kahan kernel runs. The tolerances were set from an
-error budget before the run.
+67/67 gated checks pass on an RTX 5060 Laptop GPU, 500,000 paths: three contract
+variants, antithetic and Kahan kernel runs, and bumped models (fund shock, curve
+shift). The tolerances were set from an error budget before the run.
 - Philox random words: bitwise identical in NumPy, PyTorch and Triton
   (0 mismatches in 4,194,304 words per case).
 - Base contract net PV, fused fp32 vs NumPy fp64: 721.810695 vs 721.812716
@@ -117,3 +154,10 @@ in that setup.
   is estimated from the same paths (an O(1/N) bias, not visible at these sizes).
 - Speed measurements so far were all taken at a power-capped GPU clock and are
   not quotable under the project's own clock gate.
+- CTE is applied to the PV of net cash flows along each path. Regulatory practice
+  uses the greatest present value of accumulated deficiency, with prescribed
+  scenario calibration. The real-world assumptions (4% equity risk premium, zero
+  market price of rate risk) are not calibrated, and the CTE numbers depend
+  heavily on them.
+- Pathwise delta only covers contracts without dynamic lapse, resets or later
+  deposits. The full model uses bump-and-revalue.

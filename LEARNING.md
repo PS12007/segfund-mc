@@ -626,3 +626,230 @@ being 1e-2 SE biased (phase 2).
    error is in the fund value, a product. The big precision risk is the
    cross-path sum, not the within-path sum. I'd keep in-kernel Kahan optional and
    always reduce across paths in fp64.
+
+---
+
+## Phase 4: risk metrics and sensitivities
+
+### 4.1 The finance: two questions, two measures
+
+- **"What is the guarantee worth?"** That's a *price*, so it uses the
+  risk-neutral measure: the cost of hedging it, consistent with market prices.
+  `segfund run` reports it as the PV of claims minus fees, with the antithetic +
+  control-variate estimator.
+- **"How bad can it get?"** That's a *risk* question, so it uses the real-world
+  measure: equities earn a risk premium (4% here), and we look at the whole
+  distribution of outcomes, especially the bad tail.
+
+The two can look very different for the same contract. For the base contract
+(results below):
+- **risk-neutral value:** about +$718 per $100k. The fee doesn't quite pay for
+  the guarantee *at hedging cost*.
+- **real-world average:** about -$1,940. With a risk premium, funds usually grow,
+  so the insurer usually profits, in about 90% of scenarios.
+- **but the tail is heavy:** CTE(95) is about +$11,600. In the worst 5% of
+  markets the guarantee costs far more than the fees earned.
+
+That's the whole business problem in three numbers. On average the product
+makes money, but the risk sits in scenarios that all happen together (a market
+crash hits every policy at once), and capital has to cover that tail.
+
+**CTE.** CTE(α) is the average loss in the worst (1 - α) share of scenarios.
+- **Why not VaR?** VaR(95) only tells you where the worst 5% starts. CTE(95)
+  tells you how bad that 5% is on average, so it can see a fat tail. CTE is also
+  *subadditive*, which VaR isn't: merging two portfolios never increases CTE.
+- **Negative values are normal.** VaR(70) here is negative (about -$2,350): even
+  at the 70th percentile the insurer still profits. CTE(70) averages the worst
+  30%, which mixes small profits and large losses, and comes out around +$1,130.
+- **How it's used in practice.** Canadian practice for seg fund guarantees has
+  long used CTE measures, e.g. CTE(95)-type levels for capital in approved models
+  and CTE ranges for reserves. I haven't checked the current OSFI LICAT rules for
+  this project, so read the guideline before quoting specifics.
+- **Simplification here:** the loss is the PV of net cash flows along each path.
+  Regulatory work uses the *greatest* present value of accumulated deficiency
+  (the worst point along the path, not just the end) with prescribed scenario
+  calibration. In Limits.
+
+### 4.2 The math
+
+**CTE estimator.** Sort the N losses and average the k = N(1 - α) largest.
+VaR is the smallest of those k.
+
+**Its standard error** (Manistre & Hancock, NAAJ 2005):
+
+    Var(CTE_hat) ≈ [ Var(L | L ≥ VaR) + α (CTE - VaR)^2 ] / (N (1 - α))
+
+- First term: ordinary noise from averaging k = N(1 - α) tail values.
+- Second term: we don't know exactly where the tail starts. If the estimated VaR
+  is a bit off, scenarios enter or leave the tail, and each one moves the average
+  by about (CTE - VaR).
+- Note the 1/(N(1 - α)): only the tail scenarios count. CTE(95) from 1M paths
+  rests on about 52k scenarios, so tail metrics need many more paths than means.
+
+**Checked two ways.**
+1. *Against a closed form (V11).* For a maturity guarantee with constant rates
+   and a lognormal real-world fund, the worst losses are exactly the lowest fund
+   outcomes. The CTE then follows from the lognormal partial expectation
+   E[F; F ≤ q] = e^(m + s²/2) N((ln q - m - s²)/s) (derivation in
+   `risk.cte_gbm_put_closed_form`). All four cases (75%/100% guarantee, CTE70/95)
+   match within 1.2 SE.
+2. *Against reality.* Over 32 independent 1M-path replications, the formula's SE
+   was 0.92x (CTE70) and 0.89x (CTE95) the actual spread of the estimates. With
+   32 replications that spread is itself only known to about ±13%, so this is
+   consistent, but if anything the formula slightly understates the error.
+
+**Sensitivities.**
+- **Delta** = dPV/dS0, how the liability moves when the fund moves (guarantee
+  fixed). It's negative because the liability is a put. It's also the hedge
+  ratio: to offset the guarantee's equity exposure, an insurer would hold short
+  futures worth about -delta × fund value.
+- **Rho** = change in PV for a +1bp parallel shift of today's yield curve, with
+  Hull-White refitted to the shifted curve. It's negative: higher rates mean
+  heavier discounting of future claims and faster expected fund growth, so the
+  put is worth less.
+
+**Common random numbers (CRN).** We estimate delta as
+[PV(S0(1+h)) - PV(S0(1-h))] / (2 h S0).
+- Price both sides with independent random numbers and the variances add. The
+  difference of two noisy $700 estimates divided by a tiny 2hS0 is mostly noise.
+- Price both sides on the *same* scenarios and
+  Var(A - B) = Var A + Var B - 2 Cov(A, B). The covariance is nearly as large as
+  the variances, so the noise almost cancels.
+- With counter-based Philox this is free: same seed, same path ids, same
+  numbers, in any engine.
+
+**Bump size.** Central differences have an O(h²) error from the curvature.
+Smaller h means less of that error; with independent seeds it also means more
+noise, but with CRN the noise barely depends on h.
+
+**Pathwise delta.** Differentiate each path's payoff with respect to S0, then
+average.
+- Exact for this model when the fund is the only channel: F_t = S0 · unit_t, so
+  d/dS0 max(G - F_t, 0) = -1{G > F_t} · unit_t.
+- It agrees with CRN on identical paths (V12c, z = -1.2).
+- It needs a single deposit, no resets and **no dynamic lapse**, because with
+  dynamic lapse the in-force fraction also depends on S0 through the lapse
+  function. That derivative could be added; it isn't yet. `segfund run` uses CRN
+  for the full model.
+
+### 4.3 Results
+
+`segfund run --config configs/base.yaml`. Raw output:
+`results/runs/base_gpu_4M.json` (fused GPU, 4,194,304 paths) and
+`results/runs/base_cpu_200k.json` (NumPy fp64, 200,000 paths). Illustrative
+assumptions throughout.
+
+| Quantity (per $100k deposit) | GPU, 4.2M paths | CPU, 200k paths |
+|---|---|---|
+| Risk-neutral PV net liability | 717.81 (SE 0.28) | 717.96 (SE 1.29) |
+| PV maturity claims | 2,997.41 (SE 2.43) | 2,997.77 (SE 11.12) |
+| PV death claims | 269.04 (SE 0.09) | 269.37 (SE 0.40) |
+| PV fee income | 2,551.60 (SE 0.10) | 2,551.61 (SE 0.44) |
+| Real-world mean | -1,936.85 (SE 1.78) | -1,944.01 (SE 8.10) |
+| CTE(70) | 1,129.22 (SE 5.49) | 1,107.70 (SE 25.04) |
+| CTE(95) | 11,615.58 (SE 16.75) | 11,556.05 (SE 76.84) |
+| VaR(95) | 5,677.10 | 5,586.96 |
+| Delta (per $ of fund) | -0.11430 (SE 0.00004) | -0.11435 (SE 0.00020) |
+| Rho (per +1bp) | -11.2415 (SE 0.0057) | -11.2319 (SE 0.0261) |
+
+How to read it:
+- **Delta.** A 1% market fall raises the liability by about $114 per $100k.
+  Hedging would mean holding about $11.4k of short equity exposure per $100k
+  of fund.
+- **Rho.** A 1bp fall in rates raises it by about $11. Rates matter: a 100bp
+  drop is worth about $1,100, more than the whole risk-neutral value.
+- **One number to watch.** The GPU PV, 717.81 (SE 0.28), is 2.1 combined SE
+  above the 2^25-path reference in phase 3 (717.18, SE 0.10). One seed at
+  about 2 SE is unremarkable on its own (about 1 in 30), and the 64-replication
+  mean in phase 3 matched the reference (z = 0.08). If it kept recurring at
+  other seeds, it would need investigating.
+
+Validation (`results/validation/phase1_cpu.txt`, now 34/34;
+`results/validation/phase2_gpu.txt`, now 67/67 gated): V11 CTE vs closed form
+(4/4 within 1.2 SE), V12 delta/rho vs Black-Scholes and pathwise vs CRN
+(3/3), and GPU equality for bumped models. Risk study:
+`results/risk/risk_study.txt`, plot `results/risk/loss_hist.png`:
+
+![loss distribution](results/risk/loss_hist.png)
+
+### 4.4 What went wrong
+
+1. **Wrong standard errors in my own output.** The first `segfund run` printed
+   PV components (maturity claims, death claims, fees) with SEs computed as if
+   all antithetic paths were independent, the exact mistake LEARNING 3.1 warns
+   about. Caught by reading the output critically. That output was deleted, not
+   committed, and the components now use the pair-based estimator.
+2. **An unfair comparison.** The first risk-study run compared CRN *with*
+   antithetic against independent seeds *without* it, which made CRN look 490x
+   better at h = 0.1%. Like for like, it's 382x. That run also used a different
+   seed for each bump size, so noise hid the finite-difference error. With one
+   seed the O(h²) effect is clear: 0.1% and 1% agree to 1.3e-5, and 5% is off by
+   4 SE.
+3. **A test broke when defaults changed.** Switching the base config to
+   antithetic + control variate broke a GPU test that used a path offset
+   (antithetic needs offset 0). The fix was to make the test explicit about what
+   it needs, not to weaken the check.
+
+### 4.5 Design decisions and alternatives
+
+- **CTE uses independent paths.** No antithetic pairing, because the
+  Manistre-Hancock SE assumes independent scenarios. No control variate either:
+  a control variate adjusts a *mean*, not the shape of a tail.
+- **Defaults: 1% bump for delta, 10bp for rho.** Small enough that the O(h²)
+  error is below the noise (measured above), and large enough to stay far from
+  fp32 rounding. Even at 0.1% and 1bp, GPU fp32 sensitivities match fp64 to
+  within 6.4e-4 SE (`phase2_gpu.txt`, V8d), because CRN cancels most rounding
+  errors as well.
+- **Alternatives for sensitivities:**
+  - *Likelihood-ratio (score) method:* differentiates the probability density
+    instead of the payoff. It works for kinked or digital payoffs but is much
+    noisier.
+  - *Adjoint algorithmic differentiation (AAD):* all sensitivities in one backward
+    pass. It's what banks use for hundreds of Greeks, and heavy machinery for two.
+  - *Gamma, vega, multi-point key-rate rho:* same CRN machinery, more bumps.
+    Not done.
+- **Real-world calibration is a placeholder.** A 4% equity risk premium, σ = 18%
+  and a zero market price of rate risk are illustrative. A real economic
+  scenario generator would be calibrated to tail criteria (Canada has prescribed
+  calibration points for equity returns). The CTE numbers depend heavily on
+  this; they describe this model, not the market.
+
+### 4.6 Interview questions (with model answers)
+
+1. **The risk-neutral value is +$718 but the real-world mean is -$1,940. Which is
+   right?**
+   Both, for different questions. Risk-neutral is the price: the cost of hedging
+   the guarantee, which is what the fee should be compared against. Real-world
+   says what will probably happen. Equities earn a premium, so funds usually grow
+   and the insurer usually profits. The gap is the equity risk premium the
+   insurer collects by bearing the risk. Capital is about the tail, where
+   CTE(95) is +$11,600.
+
+2. **Why CTE and not VaR for capital?**
+   VaR is a single quantile. It ignores how bad things get beyond it, and it
+   isn't subadditive, so diversification can appear to increase risk. CTE
+   averages the tail, so it sees fat tails, and it is subadditive. For a
+   guarantee whose losses are concentrated in crash scenarios, the size of the
+   tail is the point.
+
+3. **How do you know your CTE(95) isn't just noise?**
+   The SE comes from the Manistre-Hancock formula, which adds the uncertainty
+   about where the tail starts. I checked it against a closed-form CTE (four
+   cases within 1.2 SE) and against the real spread over 32 independent 1M-path
+   runs (formula/actual = 0.89-0.92, consistent given ±13% uncertainty in the
+   spread). Tail metrics use only N(1 - α) scenarios, so they need far more paths
+   than the mean.
+
+4. **What are common random numbers, and how much did they help?**
+   Pricing the bumped and unbumped contracts on the same scenarios, so the noise
+   cancels in the difference: Var(A - B) = Var A + Var B - 2 Cov. With
+   counter-based Philox it's automatic. For delta it cut the SE by 39x at a 1%
+   bump and 382x at 0.1%, against independent seeds with the same antithetic
+   setting.
+
+5. **Why is the pathwise delta restricted to contracts without dynamic lapse?**
+   Pathwise needs the derivative of every path's payoff with respect to S0. With
+   dynamic lapse, the in-force fraction depends on F/G, so S0 also moves the
+   lapse rates. That's a second chain-rule term I didn't implement. Without it,
+   pathwise and CRN agree on identical paths (z = -1.2). The full model uses CRN,
+   which needs no derivatives, only a careful bump size.
