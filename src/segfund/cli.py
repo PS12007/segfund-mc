@@ -185,12 +185,38 @@ def cmd_nested(args) -> int:
     return 0
 
 
-def cmd_not_yet(phase: int):
-    def run(args) -> int:
-        print(f"`segfund {args.cmd}` is implemented in phase {phase}; not available yet.")
-        return 2
+def cmd_report(args) -> int:
+    from segfund.report import build
 
-    return run
+    out = build(Path(args.out) if args.out else None)
+    print(f"wrote {out}")
+    return 0
+
+
+def cmd_bench(args) -> int:
+    if _pick_engine("auto") != "gpu":
+        print("segfund bench needs a CUDA GPU with torch + triton (the CPU-only rows alone say nothing).")
+        return 2
+    from segfund.bench import run as B
+    from segfund.gpu.equality import gpu_info
+
+    if args.quick:
+        sizes = {"numpy_fp64": [1 << 12], "torch_philox_fp32": [1 << 14], "torch_randn_fp32": [1 << 16],
+                 "triton_fused_fp32": [1 << 16], "triton_fused_fp32_fastmath": [1 << 16]}
+        n_check, reps = 1 << 13, 1
+    else:
+        gpu_sizes = [1 << 16, 1 << 18, 1 << 20, 1 << 22, 1 << 24]
+        sizes = {"numpy_fp64": [1 << 14, 1 << 16], "torch_philox_fp32": [1 << 16, 1 << 18],
+                 "torch_randn_fp32": gpu_sizes[:4], "triton_fused_fp32": gpu_sizes, "triton_fused_fp32_fastmath": gpu_sizes}
+        n_check, reps = 1 << 16, 3
+    t0 = time.perf_counter()
+    res = B.run_bench(sizes, n_check=n_check, seed=args.seed, numpy_reps=reps)
+    secs = time.perf_counter() - t0
+    text = B.summarize(res)
+    print("\n" + text)
+    meta = _meta() | gpu_info() | dict(seed=args.seed, quick=args.quick, wall_s=secs)
+    _write(Path(args.out_dir), "bench_quick" if args.quick else "bench", meta, text, **res)
+    return 0
 
 
 def main(argv=None) -> int:
@@ -214,7 +240,15 @@ def main(argv=None) -> int:
     v.add_argument("--out-dir", default=str(ROOT / "results" / "validation"))
     v.set_defaults(func=cmd_validate)
 
-    sub.add_parser("bench", help="benchmarks (phase 6)").set_defaults(func=cmd_not_yet(6))
+    b = sub.add_parser("bench", help="NumPy vs PyTorch unfused vs fused Triton (equality checked before timing)")
+    b.add_argument("--quick", action="store_true", help="small sizes only (smoke test)")
+    b.add_argument("--seed", type=int, default=20261113)
+    b.add_argument("--out-dir", default=str(ROOT / "results" / "bench"))
+    b.set_defaults(func=cmd_bench)
+
+    rp = sub.add_parser("report", help="build results/report/report.html from the saved results")
+    rp.add_argument("--out", default=None)
+    rp.set_defaults(func=cmd_report)
     nst = sub.add_parser("nested", help="nested simulation vs LSMC: CTE of the loss at a future valuation date")
     nst.add_argument("--config", default=str(ROOT / "configs" / "base.yaml"))
     nst.add_argument("--engine", choices=["auto", "cpu", "gpu"], default="auto")

@@ -24,6 +24,17 @@ def test_cli_nested_cpu_small(tmp_path):
     assert len(rows) == 3
 
 
-def test_cli_unbuilt_commands_say_so(capsys):
+def test_cli_report_builds_self_contained_html(tmp_path):
+    out = tmp_path / "r.html"
+    assert main(["report", "--out", str(out)]) == 0
+    page = out.read_text(encoding="utf-8")
+    assert page.startswith("<!doctype html>") and "Not actuarially approved" in page
+    assert "<script" not in page and 'src="http' not in page  # no external resources
+
+
+def test_cli_bench_without_gpu_says_so(capsys, monkeypatch):
+    import segfund.cli as cli
+
+    monkeypatch.setattr(cli, "_pick_engine", lambda name: "cpu")
     assert main(["bench"]) == 2
-    assert "phase 6" in capsys.readouterr().out
+    assert "needs a CUDA GPU" in capsys.readouterr().out

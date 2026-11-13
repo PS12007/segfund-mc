@@ -71,8 +71,41 @@ def simulate_torch(
     dtype=torch.float32,
     device: str = "cuda",
     antithetic_half: int = 0,
+    normals: str = "philox",
 ) -> PathResults:
-    pm = pack(model)
+    out = simulate_torch_tensors(model, n_paths, seed, path_offset, stream, dtype, device, antithetic_half, normals)
+    pv_mat, pv_death, pv_fee, F, D, l, U = (t.double().cpu().numpy() for t in out)
+    return PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U)
+
+
+def simulate_torch_tensors(
+    model: Model,
+    n_paths: int,
+    seed: int,
+    path_offset: int = 0,
+    stream: int = P.STREAM_MAIN,
+    dtype=torch.float32,
+    device: str = "cuda",
+    antithetic_half: int = 0,
+    normals: str = "philox",
+    pm=None,
+) -> tuple[torch.Tensor, ...]:
+    """Run on the GPU and return (pv_mat, pv_death, pv_fee, F, D, l, U) as device tensors.
+
+    normals="philox" reproduces the NumPy/Triton stream bit for bit (slow: Philox is
+    emulated with int64 tensor ops). normals="randn" uses torch's own generator
+    (torch.randn, seeded from `seed`): different random numbers, so it can only be
+    checked statistically, but it is the fair speed baseline for "plain PyTorch".
+    """
+    if normals not in ("philox", "randn"):
+        raise ValueError("normals must be 'philox' or 'randn'")
+    if normals == "randn" and antithetic_half:
+        raise ValueError("antithetic pairing is only implemented for the Philox stream")
+    pm = pack(model) if pm is None else pm
+    gen = None
+    if normals == "randn":
+        gen = torch.Generator(device=device)
+        gen.manual_seed(seed & 0x7FFFFFFFFFFFFFFF)
     tab = pm.table  # fp64 on host; each scalar is rounded to `dtype` when used with tensors
     g = torch.arange(path_offset, path_offset + n_paths, device=device, dtype=torch.int64)
     second = (g >= antithetic_half) if antithetic_half > 0 else torch.zeros_like(g, dtype=torch.bool)
@@ -99,8 +132,11 @@ def simulate_torch(
         mult = torch.clamp(torch.pow(F / GM, pm.lapse_k), pm.lapse_lo, pm.lapse_hi)
         surv_lapse = torch.exp(-pm.lapse_hazard * h * mult)
 
-        z0, z1, z2 = normals3_torch(ids, k, seed, stream, dtype)
-        z0, z1, z2 = z0 * sgn, z1 * sgn, z2 * sgn
+        if gen is None:
+            z0, z1, z2 = normals3_torch(ids, k, seed, stream, dtype)
+            z0, z1, z2 = z0 * sgn, z1 * sgn, z2 * sgn
+        else:
+            z0, z1, z2 = torch.randn((3, n_paths), generator=gen, device=device, dtype=dtype).unbind(0)
         e0 = row[C["L00"]] * z0
         e1 = row[C["L10"]] * z0 + row[C["L11"]] * z1
         e2 = row[C["L20"]] * z0 + row[C["L21"]] * z1 + row[C["L22"]] * z2
@@ -117,6 +153,4 @@ def simulate_torch(
         l = l * (1.0 - qd) * surv_lapse
 
     pv_mat = D * l * torch.clamp(GM - F, min=0.0)
-    out = [t.double().cpu().numpy() for t in (pv_mat, pv_death, pv_fee, F, D, l, U)]
-    pv_mat, pv_death, pv_fee, F, D, l, U = out
-    return PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U)
+    return pv_mat, pv_death, pv_fee, F, D, l, U
