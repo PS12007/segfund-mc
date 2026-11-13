@@ -86,14 +86,27 @@ def normals3(path_ids, step: int, seed: int, stream: int = STREAM_MAIN) -> np.nd
     return np.stack([z0, z1, z2])
 
 
+def antithetic_counter(ids: np.ndarray, half: int):
+    """Antithetic pairing used by every engine: path g < half uses counter g with +z;
+    path g >= half uses counter g - half with -z. half = 0 means no pairing."""
+    ids = np.asarray(ids, dtype=np.uint64)
+    if half <= 0:
+        return ids, np.ones(ids.shape)
+    second = ids >= np.uint64(half)
+    ctr = np.where(second, ids - np.uint64(half), ids)
+    return ctr, np.where(second, -1.0, 1.0)
+
+
 class PhiloxNormals:
     """RNG object for the reference engine: normals(step, n) for paths [offset, offset + n)."""
 
-    def __init__(self, seed: int, path_offset: int = 0, stream: int = STREAM_MAIN):
+    def __init__(self, seed: int, path_offset: int = 0, stream: int = STREAM_MAIN, antithetic_half: int = 0):
         self.seed = int(seed)
         self.path_offset = int(path_offset)
         self.stream = int(stream)
+        self.antithetic_half = int(antithetic_half)
 
     def normals(self, step: int, n_paths: int) -> np.ndarray:
         ids = np.arange(self.path_offset, self.path_offset + n_paths, dtype=np.uint64)
-        return normals3(ids, step, self.seed, self.stream)
+        ctr, sign = antithetic_counter(ids, self.antithetic_half)
+        return normals3(ctr, step, self.seed, self.stream) * sign

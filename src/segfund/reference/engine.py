@@ -48,6 +48,9 @@ class PathResults:
     fund_T: np.ndarray
     discount_T: np.ndarray  # exp(-int_0^T r)
     inforce_T: np.ndarray
+    # Value at T of 1 dollar invested at t=0 in the fund (same returns and MER as F,
+    # but no later deposits). Underlying of the control variate.
+    unit_T: np.ndarray
 
     @property
     def n_paths(self) -> int:
@@ -107,14 +110,21 @@ def build_schedule(model: Model) -> Schedule:
 def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
     c = model.contract
     n = n_paths or model.sim.n_paths
-    rng = rng or PhiloxNormals(model.sim.seed)
-    if model.sim.antithetic or model.sim.control_variate != "none" or model.sim.precision != "fp64":
-        raise NotImplementedError("antithetic / control variates / fp32 arrive in phase 3")
+    if rng is None:
+        half = 0
+        if model.sim.antithetic:
+            if n % 2:
+                raise ValueError("antithetic sampling needs an even number of paths")
+            half = n // 2
+        rng = PhiloxNormals(model.sim.seed, antithetic_half=half)
+    if model.sim.precision != "fp64":
+        raise ValueError("the NumPy reference engine is fp64 only")
 
     sch = build_schedule(model)
     tab, q_death, deposits, resets = sch.tab, sch.q_death, sch.deposits, sch.resets
 
     x = np.zeros(n)
+    U = np.ones(n)
     D = np.ones(n)
     F = np.zeros(n)
     G_M = np.zeros(n)
@@ -140,7 +150,9 @@ def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
         eps = tab.L[k] @ z
         int_r = x * tab.Bh[k] + tab.y_shift[k] + eps[1] + tab.phi_int[k]
         x = x * tab.decay[k] + tab.x_shift[k] + eps[0]
-        F = F * np.exp(int_r + tab.lnF_drift[k] + eps[2])
+        growth = np.exp(int_r + tab.lnF_drift[k] + eps[2])
+        F = F * growth
+        U = U * growth
         D = D * np.exp(-int_r)
 
         # 5-6. decrements and cash flows at the end of the step
@@ -150,7 +162,7 @@ def simulate(model: Model, n_paths: int | None = None, rng=None) -> PathResults:
         l = l * (1.0 - q_death[k]) * (1.0 - q_lapse)
 
     pv_mat += D * l * np.maximum(G_M - F, 0.0)
-    return PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l)
+    return PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U)
 
 
 def simulate_rates(

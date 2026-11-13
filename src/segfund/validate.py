@@ -215,6 +215,61 @@ def v6_hw_put(base: dict, n_paths: int, seed: int) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------------------------
+# V10: variance reduction must not bias the answer
+# ------------------------------------------------------------------------------------
+
+
+def v10_variance_reduction(base: dict, n_paths: int, seed: int) -> list[dict]:
+    """Antithetic and control-variate estimators vs closed forms.
+
+    Each record also carries the variance-reduction factor (VRF) against the
+    plain estimator on the same paths: VRF = (SE_plain / SE_method)^2, i.e. how
+    many times more plain paths you'd need for the same error. For antithetic
+    the plain SE is taken from the same 2 x (N/2) paths treated as independent.
+    """
+    from segfund.estimators import estimate
+
+    out = []
+    # (a) stochastic rates, no decrements: antithetic only (the control would be the payoff itself)
+    m = _plain(base, contract__gmmb_pct=1.0, economy__equity__rho_equity_rate=-0.5, economy__hull_white__sigma=0.015)
+    c = m.contract
+    exact = float(cf.hw_gbm_put(m.hw, m.equity, c.initial_deposit, c.initial_deposit, c.maturity_years, c.mer))
+    r = simulate(m, n_paths, PhiloxNormals(seed, antithetic_half=n_paths // 2))
+    plain = estimate(r, m, antithetic=False, control="none")
+    anti = estimate(r, m, antithetic=True, control="none")
+    out.append(_mc_record("V10a antithetic: GMMB 100% under HW rates (rho=-0.5) vs closed form",
+                          anti.mean, anti.se, exact, vrf=(plain.se / anti.se) ** 2))
+
+    # (b-d) constant rate + mortality (V5 setup): control variate, antithetic, both
+    rate = 0.03
+    m = _plain(
+        base,
+        economy__curve={"source": "flat", "flat_rate": rate},
+        economy__hull_white__sigma=0.0,
+        decrements__mortality__enabled=True,
+        contract__issue_age=70,
+    )
+    c = m.contract
+    times = m.time_grid()
+    q = m.mortality.step_death_probs(c.issue_age, times)
+    F0 = c.initial_deposit
+    exact = cf.gmdb_gmmb_constant_rate(F0, c.gmdb_pct * F0, c.gmmb_pct * F0, c.maturity_years, rate, c.mer,
+                                      m.equity.sigma, q, times)
+    r_plain = simulate(m, n_paths, PhiloxNormals(seed + 1))
+    r_anti = simulate(m, n_paths, PhiloxNormals(seed + 1, antithetic_half=n_paths // 2))
+    base_se = estimate(r_plain, m, antithetic=False, control="none").se
+    for label, res, anti_flag, ctrl in [
+        ("control variate (HW put)", r_plain, False, "hw_put"),
+        ("antithetic", r_anti, True, "none"),
+        ("antithetic + control variate", r_anti, True, "hw_put"),
+    ]:
+        e = estimate(res, m, antithetic=anti_flag, control=ctrl)
+        out.append(_mc_record(f"V10 {label}: GMDB+GMMB with mortality (age 70) vs semi-analytic",
+                              e.mean, e.se, exact, vrf=(base_se / e.se) ** 2, beta=e.beta))
+    return out
+
+
 def run_all(n_paths: int = 200_000, seed: int = 12345, config=DEFAULT_CONFIG) -> list[dict]:
     base = _load_cfg(config)
     recs = [v1_curve_fit(base)]
@@ -223,6 +278,7 @@ def run_all(n_paths: int = 200_000, seed: int = 12345, config=DEFAULT_CONFIG) ->
     recs += v4_black_scholes(base, n_paths, seed + 20)
     recs.append(v5_gmdb(base, n_paths, seed + 30))
     recs += v6_hw_put(base, n_paths, seed + 40)
+    recs += v10_variance_reduction(base, n_paths, seed + 50)
     return recs
 
 
@@ -233,6 +289,8 @@ def format_table(recs: list[dict]) -> str:
         if r["kind"] == "mc":
             lines.append(
                 f"[{flag}] {r['name']}\n        mc={r['mc']:.8g}  se={r['se']:.3g}  exact={r['exact']:.8g}  z={r['z']:+.2f}"
+                + (f"  VRF={r['vrf']:.2f}" if "vrf" in r else "")
+                + (f"  beta={r['beta']:.3f}" if r.get("beta") is not None else "")
             )
         else:
             lines.append(f"[{flag}] {r['name']}\n        max_rel_error={r['max_rel_error']:.3g}  tol={r['tol']:.0e}")
