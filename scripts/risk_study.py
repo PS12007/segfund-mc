@@ -73,16 +73,17 @@ def main():
 
     # 2 + 3. CRN vs independent, bump sizes
     sens = {"delta": [], "rho": []}
-    L.append("2-3. Sensitivities (risk-neutral, antithetic), common random numbers unless stated")
+    L.append("2-3. Sensitivities (risk-neutral, antithetic), common random numbers unless stated.")
+    L.append("     One seed for every bump size, so differences between rows are finite-difference error, not noise.")
+    s_delta, s_rho = next(si), next(si)
     for h in (0.001, 0.01, 0.05):
-        s = next(si)
-        d = risk.delta(sim, m_rn, a.n, s, h=h, antithetic=True)
-        ind = risk.independent_delta_se(sim, m_rn, a.n, s, h=h)
+        d = risk.delta(sim, m_rn, a.n, s_delta, h=h, antithetic=True)
+        ind = risk.independent_delta_se(sim, m_rn, a.n, s_delta, h=h, antithetic=True)
         sens["delta"].append(dict(bump=h, value=d.value, se_crn=d.se, se_independent=ind, se_ratio=ind / d.se))
         L.append(f"   delta h={h:>6.1%}: {d.value:+.6f}  SE(CRN) {d.se:.6f}  SE(independent seeds) {ind:.6f}"
                  f"  -> CRN is {ind / d.se:,.0f}x tighter")
     for bp in (1, 10, 50):
-        d = risk.rho(sim, m_rn, a.n, next(si), shift=bp * 1e-4, antithetic=True)
+        d = risk.rho(sim, m_rn, a.n, s_rho, shift=bp * 1e-4, antithetic=True)
         sens["rho"].append(dict(bump_bp=bp, value=d.value, se_crn=d.se))
         L.append(f"   rho shift={bp:>3d}bp: {d.value:+.4f} per bp  SE(CRN) {d.se:.4f}")
     L.append("")

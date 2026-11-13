@@ -152,12 +152,15 @@ def rho(sim, model: Model, n: int, seed: int, shift: float = 0.001, antithetic: 
     return Sensitivity("rho", shift, d * scale, se * scale, "PV dollars per +1bp parallel shift", pu, pd)
 
 
-def independent_delta_se(sim, model: Model, n: int, seed: int, h: float = 0.01) -> float:
-    """Same delta, but up and down priced with *different* seeds: shows what CRN buys."""
+def independent_delta_se(sim, model: Model, n: int, seed: int, h: float = 0.01, antithetic: bool = False) -> float:
+    """Same delta, but up and down priced with *different* seeds: shows what CRN buys.
+
+    Uses the same antithetic setting as the CRN estimate so the comparison is like for like.
+    """
     S0 = model.contract.initial_deposit * model.fund_shock
-    up = sim(bumped(model, fund_shock=1 + h), n, seed, False).pv_net
-    dn = sim(bumped(model, fund_shock=1 - h), n, seed + 7919, False).pv_net
-    se = math.sqrt(up.var(ddof=1) / n + dn.var(ddof=1) / n)
+    up = _paired(sim(bumped(model, fund_shock=1 + h), n, seed, antithetic).pv_net, antithetic)
+    dn = _paired(sim(bumped(model, fund_shock=1 - h), n, seed + 7919, antithetic).pv_net, antithetic)
+    se = math.sqrt(up.var(ddof=1) / up.size + dn.var(ddof=1) / dn.size)
     return se / (2 * h * S0)
 
 
