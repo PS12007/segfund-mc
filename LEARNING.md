@@ -393,3 +393,236 @@ The risk is summing 10^6 to 10^8 path values into one mean.
    ~1e-6 and far below Monte Carlo noise, plus careful summation (Kahan, pairwise,
    or fp64 for the final reduction) where many numbers are added together. That's
    phase 3.
+
+---
+
+## Phase 3: variance reduction and the precision study
+
+### 3.1 Variance reduction, in plain terms
+
+Monte Carlo error falls like 1/sqrt(N): 100 times more paths for 10 times less
+error. Variance reduction lowers the constant in front, so you get the same
+accuracy with fewer paths.
+
+**Antithetic variates.** For every path driven by normals z, also run one driven
+by -z. If the payoff responds roughly monotonically to the shocks (a fund that
+went up on one path goes down on its mirror), the two errors partly cancel.
+- Implementation (`rng.philox.antithetic_counter`, same in all three engines):
+  path g < N/2 uses Philox counter g; path g >= N/2 uses counter g - N/2 with
+  every normal negated.
+- **The SE must be computed from the N/2 pair averages.** The two halves of a
+  pair are dependent, so treating them as 2 independent paths gives a wrong
+  standard error (`estimators.py`; tested in `test_antithetic_se_uses_pairs`).
+
+**Control variate.** Find something correlated with what you want whose exact
+mean you know, and subtract its simulation error:
+
+    Y_cv = Y - beta (X - E[X]),   beta = Cov(Y, X) / Var(X)
+
+Here X is the discounted maturity put on the first deposit,
+D(T) * max(0.75 * F0 - F0 * unit(T), 0), and E[X] comes from the Hull-White +
+GBM put formula, validated in V6.
+- A seg fund liability *is* mostly that put, so the correlation is high:
+  beta ≈ 1.0 in the clean test case.
+- **Why not the constant-rate Black-Scholes put** (the original plan)? Its mean
+  is known only when rates are constant. With stochastic rates its true mean
+  isn't the BS price, so subtracting the BS price would bias every answer.
+- Two costs: beta is estimated from the same paths (an O(1/N) bias, too small to
+  see here), and the control is only valid under the risk-neutral measure. The
+  code refuses it under real-world.
+- Needing the control's underlying meant adding one output per path, `unit_T`:
+  the value of $1 invested at t=0. With later deposits, the fund isn't a single
+  GBM, so F(T) itself won't do.
+
+**Results.** First, the clean case with an exact answer (age-70 GMDB+GMMB,
+constant rate; `results/validation/phase1_cpu.txt`, V10, 200k paths). All are
+unbiased:
+
+| Estimator | Estimate | SE | Exact | z | VRF |
+|---|---|---|---|---|---|
+| control variate | 6945.44 | 2.82 | 6944.79 | +0.23 | 65 |
+| antithetic | 6949.02 | 17.0 | 6944.79 | +0.25 | 1.8 |
+| both | 6946.98 | 1.61 | 6944.79 | +1.36 | 200 |
+
+VRF (variance reduction factor) = how many times more plain paths you'd need for
+the same SE.
+
+Base contract with fees and dynamic lapse (`results/convergence/convergence.txt`,
+64 replications per N): VRF about 1.2–2.5 for antithetic, 27–60 for the control
+variate, and 82–150 for both. That's lower than the clean case, because fees and
+lapses add variation the put doesn't explain. Every estimator agrees with an
+independent 2^25-path reference within 1.7 SE.
+
+The GPU engines reproduce the antithetic pairing exactly. `results/validation/phase2_gpu.txt`,
+now 57/57 gated checks, compares fused-kernel antithetic runs with NumPy fp64 path
+by path: the base-contract mean agrees to -1.1e-7 SE.
+
+### 3.2 Convergence (V9)
+
+![convergence](results/convergence/convergence.png)
+
+For N = 2^10 to 2^22, 64 independent replications per estimator. "Empirical
+error" is the standard deviation of the 64 estimates, i.e. the real sampling
+error. Fitted slopes of log(error) against log(N), with 95% CIs:
+
+| Estimator | Slope | 95% CI |
+|---|---|---|
+| plain | -0.517 | [-0.544, -0.491] |
+| antithetic | -0.500 | [-0.528, -0.471] |
+| control variate | -0.508 | [-0.546, -0.470] |
+| both | -0.489 | [-0.515, -0.463] |
+
+All contain -0.5. The reported SE (x markers on the plot) tracks the empirical
+error, which means the SE formulas, including the pair-based antithetic one, are
+right.
+
+**This took two runs, and both are kept.** Run 1
+(`results/convergence/convergence_run1_R32_spaced_seeds.txt`) used 32
+replications with Philox keys 1000 apart. The plain slope came out -0.452, CI
+[-0.490, -0.415], missing -0.5. The cause was one point: at N = 1M the empirical
+error was 8.52 against a reported SE of 6.26.
+- *Seed check:* repeating that N = 1M measurement with random 63-bit keys gave
+  ratios of 0.82, 0.93 and 1.14, and run 1's replications show no
+  autocorrelation (-0.16). So no evidence of correlated keys, and 1.36 looks
+  like chance. With 32 replications a standard deviation is itself only
+  accurate to about ±13%.
+- *Protocol change:* random 63-bit keys, 64 replications.
+- *Honest caveat:* changing a protocol after a failed check is how people fool
+  themselves. That's why run 1 stays in the repo and is described here.
+
+### 3.3 The precision study
+
+`results/precision/precision_study.txt`, from `scripts/precision_study.py`.
+Three questions.
+
+**A. Does fp32 hurt each path?** Fused kernel vs NumPy fp64 on 500k identical
+scenarios:
+
+| Kernel variant | discount max rel. err | discount mean signed err | pv_net mean diff (SE units) | worst path |
+|---|---|---|---|---|
+| FAST_MATH (tl.exp) | 4.74e-6 | -1.56e-6 | +8.1e-5 | $0.171 |
+| default (libdevice) | 3.10e-6 | +8.53e-7 | -2.3e-4 | $0.157 |
+| default + KAHAN | 8.48e-7 | -3.80e-8 | -4.6e-4 | $0.112 |
+
+KAHAN compensates the running sum of the integrated rate (and takes
+D = exp(-sum) each step) and the two PV sums.
+- It works where it should: the discount factor's error falls about 4x and its
+  bias about 20x.
+- It does *not* make the PV means better, because the remaining error comes from
+  the fund value, which is a product, not a sum.
+- Per path, fp32 is a non-issue either way: errors are around 1e-6 relative,
+  10,000x below the Monte Carlo SE.
+
+**B. Does fp32 hurt the portfolio sum?** This is where it matters. Mean of N
+per-path fee values; error in dollars per policy against an fp64 sum of the same
+fp32 values:
+
+| N | MC SE | sequential fp32 | Kahan (4096 lanes) | pairwise fp32 | GPU tree fp32 | GPU fp64 accumulate |
+|---|---|---|---|---|---|---|
+| 2^22 = 4.2M | 0.306 | -0.183 | +5.9e-5 | -1.8e-4 | +5.9e-5 | 0 |
+| 2^24 = 16.8M | 0.153 | **+61.2** | -6.0e-5 | -6.0e-5 | +1.8e-4 | 0 |
+| 2^26 = 67.1M | 0.076 | **-1,413** | -1.9e-5 | -1.9e-5 | -1.9e-5 | 0 |
+
+The true mean is about 2,551. A single fp32 running total ends up 55% wrong,
+18,600 standard errors. Why, and why the sign flips:
+- fp32 holds 24 significant bits, so the gap between neighbouring numbers grows
+  with their size. Near 4.3e10 (16M fees summed) the gap is 4,096. Adding a fee
+  of about 2,551 (more than half the gap) rounds **up** to 4,096 every time, so
+  the total runs high.
+- Near 1.7e11 (67M fees) the gap is 16,384. A 2,551 fee is less than half of
+  that, so it rounds to **zero**. The total stops growing and the mean collapses.
+- Compensated (Kahan), pairwise and tree sums keep the partial totals small
+  relative to the terms. Their errors stay below 0.003 SE at every N.
+- fp64 accumulation of fp32 values (`torch.sum(x, dtype=torch.float64)`) matches
+  the reference exactly here. It's also the cheapest fix on a GPU: one fp64 add
+  per value, in a reduction that is memory-bound anyway.
+
+**Practical rule.** fp32 per path is fine. Never accumulate many paths in one
+fp32 running total. Any tree reduction is safe at these sizes; fp64 or Kahan
+accumulators are safe at any size. The engine reduces on the host in fp64.
+
+**C. What does accuracy cost?** Kernel time, 4.2M paths, CUDA events, clock
+gate. **None of these rows are quotable.** Under load the GPU sat at a constant
+1,515 MHz, 49% of its 3,090 MHz max. `nvidia-smi` showed reason `0x4`, SW power
+cap active, at about 35 W and 60 C, so the laptop's power budget limited the GPU,
+not heat. All three variants ran at the same constant clock, so their *ratio* is
+meaningful even though the absolute speed isn't:
+
+| Variant | Median | Relative |
+|---|---|---|
+| FAST_MATH | 38.6 ms | 0.92 |
+| default (libdevice) | 41.9 ms | 1.00 |
+| default + KAHAN | 42.1 ms | 1.005 |
+
+Accurate math costs about 8%; Kahan costs about 0.5%. Both are cheap next to
+being 1e-2 SE biased (phase 2).
+
+### 3.4 What went wrong
+
+1. **The convergence slope CI missed -0.5 on run 1** (3.2). Investigated, kept,
+   protocol changed, disclosed.
+2. **The GPU wouldn't boost while timing.** The gate caught it, and no speed
+   number from this phase is quotable. Phase 6 needs the laptop in its
+   performance power mode (the vendor's control app, or Windows "Best
+   performance") and a re-check of the cap reason.
+3. **The plot label rendered as maths**: matplotlib read `$` as mathtext. Fixed
+   by escaping it and redrawing from the saved JSON, so no numbers changed.
+4. **A PowerShell string corrupted the docs.** In PowerShell double-quoted
+   strings the backtick is an escape character, so `` `r `` in "`` `results/...``"
+   became a carriage return in LEARNING.md and README.md. A scan for control
+   characters found it before it was committed. Docs are now edited with a
+   proper editor tool, not shell string replacement.
+
+### 3.5 Design decisions and alternatives
+
+- **Antithetic by counter remapping, not two paths per thread.** Every engine
+  stays identical and equality-testable, but each pair computes its Philox block
+  twice. Doing both mirror paths in one thread would halve the RNG cost and
+  double the registers. That's a phase 6 option.
+- **Other controls we could add:** the GMDB puts at each death date (a strip of
+  puts with known prices), or the discounted fund itself (a martingale with mean
+  e^(-MER T)). Several controls means a multiple regression for beta. One good
+  control already gives about 50x.
+- **Quasi-Monte Carlo (Sobol)** would often beat 1/sqrt(N) for smooth problems,
+  but it gives up the simple CLT standard error and complicates the counter-based
+  design. Out of scope; noted as an alternative.
+- **fp64 reduction on the host** rather than in-kernel block reductions. The
+  kernel writes per-path values anyway, because CTE needs them in phase 4. An
+  in-kernel reduction only pays off when per-path output isn't needed.
+
+### 3.6 Interview questions (with model answers)
+
+1. **How do you compute the standard error with antithetic variates?**
+   Average each pair first, then take the standard deviation of the N/2 pair
+   averages, divided by sqrt(N/2). The two halves of a pair are dependent by
+   construction, so treating them as 2N independent draws gives a wrong SE. In
+   my test the pair-based SE is the one that matches the scatter across
+   independent replications.
+
+2. **Why is the control variate a Hull-White put and not a Black-Scholes put?**
+   A control needs an exactly known mean under the model you're simulating.
+   Under stochastic rates, the BS put's expectation isn't the BS price, so it
+   would bias the result. The HW+GBM put has a closed form under my model, and I
+   validated it separately (V6). It cut variance about 50x on the base contract.
+
+3. **You simulate in fp32. Where can that actually go wrong?**
+   Not per path: errors are about 1e-6 relative there. It goes wrong when you add
+   millions of path values into one fp32 total. At 67M paths a sequential fp32
+   sum got the mean fee wrong by 55%, because each new term was below half the
+   gap between representable numbers and rounded to zero. Pairwise, tree, Kahan
+   or fp64 accumulation all fix it, with errors below 0.003 SE.
+
+4. **How did you verify the 1/sqrt(N) convergence, and what went wrong?**
+   I ran 64 independent replications at each N from 2^10 to 2^22, measured the
+   real spread of the estimates and fitted the log-log slope with a confidence
+   interval. All four estimators include -0.5. The first run, with 32
+   replications, missed on one estimator. I checked for correlated seeds, found
+   none, changed to random keys and more replications, and kept the failed run in
+   the repo.
+
+5. **Kahan summation inside the kernel: worth it?**
+   It cut the discount factor's error about 4x and its bias about 20x for 0.5%
+   extra time, so it's cheap. But it didn't improve the PV, because the remaining
+   error is in the fund value, a product. The big precision risk is the
+   cross-path sum, not the within-path sum. I'd keep in-kernel Kahan optional and
+   always reduce across paths in fp64.
