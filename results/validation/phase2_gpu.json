@@ -1,0 +1,712 @@
+{
+  "meta": {
+    "timestamp": "2026-11-13T02:45:29",
+    "git_commit": "1d1feaf",
+    "python": "3.12.10",
+    "numpy": "2.5.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "compute_capability": "12.0",
+    "torch": "2.12.0+cu130",
+    "torch_cuda": "13.0",
+    "triton": "3.8.0",
+    "n_paths": 500000,
+    "seed": 12345,
+    "wall_s": 203.82873090000066
+  },
+  "checks": [
+    {
+      "name": "V7a Philox words, Triton == NumPy, seed=0x3039 step=0 paths=[0, 1048576)",
+      "kind": "exact",
+      "n_words": 4194304,
+      "mismatches": 0,
+      "passed": true
+    },
+    {
+      "name": "V7a Philox words, PyTorch == NumPy, seed=0x3039 step=0 paths=[0, 1048576)",
+      "kind": "exact",
+      "n_words": 4194304,
+      "mismatches": 0,
+      "passed": true
+    },
+    {
+      "name": "V7b normals, Triton fp32 vs NumPy fp64, seed=0x3039 step=0 paths=[0, 1048576)",
+      "kind": "tol",
+      "max_abs": 8.892349653288889e-07,
+      "mean_abs": 5.4614091417198906e-08,
+      "tol": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "V7a Philox words, Triton == NumPy, seed=0xa4093822299f31d0 step=359 paths=[0, 1048576)",
+      "kind": "exact",
+      "n_words": 4194304,
+      "mismatches": 0,
+      "passed": true
+    },
+    {
+      "name": "V7a Philox words, PyTorch == NumPy, seed=0xa4093822299f31d0 step=359 paths=[0, 1048576)",
+      "kind": "exact",
+      "n_words": 4194304,
+      "mismatches": 0,
+      "passed": true
+    },
+    {
+      "name": "V7b normals, Triton fp32 vs NumPy fp64, seed=0xa4093822299f31d0 step=359 paths=[0, 1048576)",
+      "kind": "tol",
+      "max_abs": 8.551799240974489e-07,
+      "mean_abs": 5.453480019837543e-08,
+      "tol": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "V7a Philox words, Triton == NumPy, seed=0xffffffffffffffff step=7 paths=[2146435071, 2147483647)",
+      "kind": "exact",
+      "n_words": 4194304,
+      "mismatches": 0,
+      "passed": true
+    },
+    {
+      "name": "V7a Philox words, PyTorch == NumPy, seed=0xffffffffffffffff step=7 paths=[2146435071, 2147483647)",
+      "kind": "exact",
+      "n_words": 4194304,
+      "mismatches": 0,
+      "passed": true
+    },
+    {
+      "name": "V7b normals, Triton fp32 vs NumPy fp64, seed=0xffffffffffffffff step=7 paths=[2146435071, 2147483647)",
+      "kind": "tol",
+      "max_abs": 8.490360596802304e-07,
+      "mean_abs": 5.454553868162714e-08,
+      "tol": 1e-05,
+      "passed": true
+    },
+    {
+      "name": "V8a [Triton fused fp32] per-path state rel. error, base (mortality, dynamic lapse, fee)",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 3.2429003439939474e-06,
+        "discount_T": 3.1231453203813773e-06,
+        "inforce_T": 7.226225181580682e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_net, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 721.8106954954351,
+      "mean_cpu": 721.8127159701917,
+      "se_cpu": 9.080671649245113,
+      "diff": -0.002020474756591284,
+      "diff_over_se": -0.00022250278774910316,
+      "path_max_abs": 0.1865575229676324,
+      "path_mean_abs": 0.006835018122815539,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_maturity_claims, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 3003.5574188147334,
+      "mean_cpu": 3003.5588921493154,
+      "se_cpu": 8.234131848927154,
+      "diff": -0.0014733345819877286,
+      "diff_over_se": -0.00017893016641210246,
+      "path_max_abs": 0.18358099843317177,
+      "path_mean_abs": 0.005454751522589411,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_death_claims, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 269.2841811905893,
+      "mean_cpu": 269.28428380668186,
+      "se_cpu": 0.4257611996243647,
+      "diff": -0.0001026160925334807,
+      "diff_over_se": -0.00024101795237333872,
+      "path_max_abs": 0.005353925335384702,
+      "path_mean_abs": 0.000292047665786689,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_fees, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 2551.0309045098875,
+      "mean_cpu": 2551.030459985806,
+      "se_cpu": 0.8872134765518859,
+      "diff": 0.0004445240815584839,
+      "diff_over_se": 0.0005010339600409432,
+      "path_max_abs": 0.02214527364958485,
+      "path_mean_abs": 0.001464949448051157,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8a [Triton fused fp32 FAST_MATH, not gated] per-path state rel. error, base (mortality, dynamic lapse, fee)",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 3.2193964912258644e-06,
+        "discount_T": 4.560810884108833e-06,
+        "inforce_T": 7.580592628003587e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_net, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 721.8134826089301,
+      "mean_cpu": 721.8127159701917,
+      "se_cpu": 9.080671649245113,
+      "diff": 0.0007666387384688278,
+      "diff_over_se": 8.442533416925822e-05,
+      "path_max_abs": 0.17969109796831617,
+      "path_mean_abs": 0.012367473937742611,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_maturity_claims, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 3003.554293098557,
+      "mean_cpu": 3003.5588921493154,
+      "se_cpu": 8.234131848927154,
+      "diff": -0.00459905075831557,
+      "diff_over_se": -0.000558534991022131,
+      "path_max_abs": 0.17676878783095162,
+      "path_mean_abs": 0.007893399929762667,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_death_claims, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 269.2839969863253,
+      "mean_cpu": 269.28428380668186,
+      "se_cpu": 0.4257611996243647,
+      "diff": -0.0002868203565640215,
+      "diff_over_se": -0.0006736648544232631,
+      "path_max_abs": 0.004574332759830213,
+      "path_mean_abs": 0.0004169652592589042,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_fees, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 2551.024807475952,
+      "mean_cpu": 2551.030459985806,
+      "se_cpu": 0.8872134765518859,
+      "diff": -0.005652509853916854,
+      "diff_over_se": -0.006371082048804164,
+      "path_max_abs": 0.04199602253356716,
+      "path_mean_abs": 0.005652518105315548,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8a [PyTorch unfused fp32] per-path state rel. error, base (mortality, dynamic lapse, fee)",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 3.2429003439939474e-06,
+        "discount_T": 3.1231453203813773e-06,
+        "inforce_T": 7.226225181580682e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_net, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 721.8109798533742,
+      "mean_cpu": 721.8127159701917,
+      "se_cpu": 9.080671649245113,
+      "diff": -0.00173611681748298,
+      "diff_over_se": -0.0001911881504522086,
+      "path_max_abs": 0.1826512729676324,
+      "path_mean_abs": 0.006789386631496177,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_maturity_claims, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 3003.557480924618,
+      "mean_cpu": 3003.5588921493154,
+      "se_cpu": 8.234131848927154,
+      "diff": -0.001411224697221769,
+      "diff_over_se": -0.00017138718727289278,
+      "path_max_abs": 0.17967474843317177,
+      "path_mean_abs": 0.005452178152499111,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_death_claims, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 269.28418388590933,
+      "mean_cpu": 269.28428380668186,
+      "se_cpu": 0.4257611996243647,
+      "diff": -9.992077252718445e-05,
+      "diff_over_se": -0.00023468736140198147,
+      "path_max_abs": 0.005231855022884702,
+      "path_mean_abs": 0.0002925498257557623,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_fees, base (mortality, dynamic lapse, fee)",
+      "kind": "mean",
+      "mean_gpu": 2551.0306849571534,
+      "mean_cpu": 2551.030459985806,
+      "se_cpu": 0.8872134765518859,
+      "diff": 0.00022497134750665282,
+      "diff_over_se": 0.00025357070587001625,
+      "path_max_abs": 0.023012190335066407,
+      "path_mean_abs": 0.0014068414704558677,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8c [PyTorch unfused fp64] per-path state rel. error, base (mortality, dynamic lapse, fee)",
+      "kind": "tol",
+      "max_rel": 3.183274336708437e-15,
+      "tol": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "V8a [Triton fused fp32] per-path state rel. error, resets + second deposit at t=2",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 3.2503418183704565e-06,
+        "discount_T": 3.1231453203813773e-06,
+        "inforce_T": 3.711963028503388e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_net, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 2638.3187144773615,
+      "mean_cpu": 2638.321131676102,
+      "se_cpu": 10.526296061388466,
+      "diff": -0.0024171987406589324,
+      "diff_over_se": -0.00022963431073589743,
+      "path_max_abs": 0.1530609796209319,
+      "path_mean_abs": 0.008019337877957824,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_maturity_claims, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 4602.384016439216,
+      "mean_cpu": 4602.3852534664875,
+      "se_cpu": 9.987576761768603,
+      "diff": -0.0012370272715997999,
+      "diff_over_se": -0.00012385659716128647,
+      "path_max_abs": 0.15162319826049497,
+      "path_mean_abs": 0.006998225755946967,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_death_claims, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 377.41543928192004,
+      "mean_cpu": 377.41547806662203,
+      "se_cpu": 0.3582727769613738,
+      "diff": -3.8784701985150605e-05,
+      "diff_over_se": -0.00010825467208001704,
+      "path_max_abs": 0.004168904424204811,
+      "path_mean_abs": 0.00029508108011671414,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_fees, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 2341.4807412437744,
+      "mean_cpu": 2341.4795998570075,
+      "se_cpu": 0.8296657603142008,
+      "diff": 0.0011413867669034516,
+      "diff_over_se": 0.001375718779175845,
+      "path_max_abs": 0.013156511623492406,
+      "path_mean_abs": 0.0013663170035662967,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8a [Triton fused fp32 FAST_MATH, not gated] per-path state rel. error, resets + second deposit at t=2",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 2.9406248375085536e-06,
+        "discount_T": 4.560810884108833e-06,
+        "inforce_T": 5.584592739014217e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_net, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 2638.3148606319974,
+      "mean_cpu": 2638.321131676102,
+      "se_cpu": 10.526296061388466,
+      "diff": -0.0062710441047784116,
+      "diff_over_se": -0.0005957503064901665,
+      "path_max_abs": 0.3299883062718436,
+      "path_mean_abs": 0.016485865588621043,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_maturity_claims, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 4602.374444191182,
+      "mean_cpu": 4602.3852534664875,
+      "se_cpu": 9.987576761768603,
+      "diff": -0.010809275305291521,
+      "diff_over_se": -0.0010822720628960063,
+      "path_max_abs": 0.35054427894647233,
+      "path_mean_abs": 0.013860712100497129,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_death_claims, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 377.4147468064158,
+      "mean_cpu": 377.41547806662203,
+      "se_cpu": 0.3582727769613738,
+      "diff": -0.0007312602062370388,
+      "diff_over_se": -0.0020410710867822305,
+      "path_max_abs": 0.00680150314178718,
+      "path_mean_abs": 0.0007641809827542156,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_fees, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 2341.4743303656005,
+      "mean_cpu": 2341.4795998570075,
+      "se_cpu": 0.8296657603142008,
+      "diff": -0.005269491407034366,
+      "diff_over_se": -0.006351342503321782,
+      "path_max_abs": 0.035387821604672354,
+      "path_mean_abs": 0.005269512586935149,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8a [PyTorch unfused fp32] per-path state rel. error, resets + second deposit at t=2",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 2.9380060246697294e-06,
+        "discount_T": 3.1231453203813773e-06,
+        "inforce_T": 3.711963028503388e-06
+      },
+      "tol": 0.00011999999999999999,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_net, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 2638.3190432470533,
+      "mean_cpu": 2638.321131676102,
+      "se_cpu": 10.526296061388466,
+      "diff": -0.002088429048853868,
+      "diff_over_se": -0.00019840113147818824,
+      "path_max_abs": 0.1525726983709319,
+      "path_mean_abs": 0.00792145540923026,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_maturity_claims, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 4602.384143559012,
+      "mean_cpu": 4602.3852534664875,
+      "se_cpu": 9.987576761768603,
+      "diff": -0.0011099074754383764,
+      "diff_over_se": -0.00011112880550635524,
+      "path_max_abs": 0.15162319826049497,
+      "path_mean_abs": 0.006992991339191714,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_death_claims, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 377.4154450154337,
+      "mean_cpu": 377.41547806662203,
+      "se_cpu": 0.3582727769613738,
+      "diff": -3.305118832486187e-05,
+      "diff_over_se": -9.22514643874971e-05,
+      "path_max_abs": 0.004046834111704811,
+      "path_mean_abs": 0.0002961387605715514,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_fees, resets + second deposit at t=2",
+      "kind": "mean",
+      "mean_gpu": 2341.4805453273925,
+      "mean_cpu": 2341.4795998570075,
+      "se_cpu": 0.8296657603142008,
+      "diff": 0.000945470384976943,
+      "diff_over_se": 0.001139579852757677,
+      "path_max_abs": 0.012668230373492406,
+      "path_mean_abs": 0.0012430286865076007,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8c [PyTorch unfused fp64] per-path state rel. error, resets + second deposit at t=2",
+      "kind": "tol",
+      "max_rel": 3.4910799647226167e-15,
+      "tol": 1e-10,
+      "passed": true
+    },
+    {
+      "name": "V8a [Triton fused fp32] per-path state rel. error, real-world, 20 years (240 steps)",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 5.4175526350460395e-06,
+        "discount_T": 4.6964685514772054e-06,
+        "inforce_T": 1.4172504770064142e-05
+      },
+      "tol": 0.00023999999999999998,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_net, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": -3789.2100777139617,
+      "mean_cpu": -3789.214211253806,
+      "se_cpu": 3.568991039296408,
+      "diff": 0.004133539844133338,
+      "diff_over_se": 0.001158181625737067,
+      "path_max_abs": 0.20938599592773244,
+      "path_mean_abs": 0.007396186618348926,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_maturity_claims, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 256.1610729155967,
+      "mean_cpu": 256.1615448092772,
+      "se_cpu": 1.929146936312827,
+      "diff": -0.00047189368046929303,
+      "diff_over_se": -0.0002446126168964724,
+      "path_max_abs": 0.1886659207084449,
+      "path_mean_abs": 0.000981612058977262,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_death_claims, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 246.65541071370322,
+      "mean_cpu": 246.65567641560716,
+      "se_cpu": 0.6927481392712941,
+      "diff": -0.00026570190394181736,
+      "diff_over_se": -0.0003835476255790608,
+      "path_max_abs": 0.026418746168019425,
+      "path_mean_abs": 0.0004631617686661865,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [Triton fused fp32] pv_fees, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 4292.026561343262,
+      "mean_cpu": 4292.0314324786905,
+      "se_cpu": 1.9801521883915882,
+      "diff": -0.00487113542840234,
+      "diff_over_se": -0.0024599803272489884,
+      "path_max_abs": 0.15978915844971198,
+      "path_mean_abs": 0.006277605055448139,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8a [Triton fused fp32 FAST_MATH, not gated] per-path state rel. error, real-world, 20 years (240 steps)",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 6.487354587072451e-06,
+        "discount_T": 8.013258667732424e-06,
+        "inforce_T": 1.4393096239113752e-05
+      },
+      "tol": 0.00023999999999999998,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_net, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": -3789.194641801624,
+      "mean_cpu": -3789.214211253806,
+      "se_cpu": 3.568991039296408,
+      "diff": 0.01956945218171313,
+      "diff_over_se": 0.00548318893666123,
+      "path_max_abs": 0.35042845719726756,
+      "path_mean_abs": 0.02172278414709975,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_maturity_claims, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 256.1605744599524,
+      "mean_cpu": 256.1615448092772,
+      "se_cpu": 1.929146936312827,
+      "diff": -0.0009703493248025552,
+      "diff_over_se": -0.0005029939951889725,
+      "path_max_abs": 0.3113340792915551,
+      "path_mean_abs": 0.0013606384699144983,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_death_claims, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 246.65521377553281,
+      "mean_cpu": 246.65567641560716,
+      "se_cpu": 0.6927481392712941,
+      "diff": -0.0004626400743461545,
+      "diff_over_se": -0.0006678330090251969,
+      "path_max_abs": 0.04247904897601984,
+      "path_mean_abs": 0.0006297942111049474,
+      "passed": true,
+      "gated": false
+    },
+    {
+      "name": "V8b [Triton fused fp32 FAST_MATH, not gated] pv_fees, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 4292.0104300371095,
+      "mean_cpu": 4292.0314324786905,
+      "se_cpu": 1.9801521883915882,
+      "diff": -0.02100244158100395,
+      "diff_over_se": -0.01060647848389044,
+      "path_max_abs": 0.2493019420253404,
+      "path_mean_abs": 0.02100244158081634,
+      "passed": false,
+      "gated": false
+    },
+    {
+      "name": "V8a [PyTorch unfused fp32] per-path state rel. error, real-world, 20 years (240 steps)",
+      "kind": "tol",
+      "max_rel": {
+        "fund_T": 8.432411853150916e-06,
+        "discount_T": 5.171144939994599e-06,
+        "inforce_T": 1.4172504770064142e-05
+      },
+      "tol": 0.00023999999999999998,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_net, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": -3789.209445156185,
+      "mean_cpu": -3789.214211253806,
+      "se_cpu": 3.568991039296408,
+      "diff": 0.004766097620631626,
+      "diff_over_se": 0.0013354187691015376,
+      "path_max_abs": 0.3612193686858518,
+      "path_mean_abs": 0.007485877898642047,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_maturity_claims, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 256.16128900629644,
+      "mean_cpu": 256.1615448092772,
+      "se_cpu": 1.929146936312827,
+      "diff": -0.0002558029807460116,
+      "diff_over_se": -0.00013259901354892493,
+      "path_max_abs": 0.32391560402174946,
+      "path_mean_abs": 0.0009359741326336007,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_death_claims, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 246.65548328234286,
+      "mean_cpu": 246.65567641560716,
+      "se_cpu": 0.6927481392712941,
+      "diff": -0.00019313326430392408,
+      "diff_over_se": -0.00027879290229069706,
+      "path_max_abs": 0.032745145499120554,
+      "path_mean_abs": 0.0004395942727060284,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8b [PyTorch unfused fp32] pv_fees, real-world, 20 years (240 steps)",
+      "kind": "mean",
+      "mean_gpu": 4292.026217444824,
+      "mean_cpu": 4292.0314324786905,
+      "se_cpu": 1.9801521883915882,
+      "diff": -0.005215033866079466,
+      "diff_over_se": -0.0026336530579073644,
+      "path_max_abs": 0.15978915844971198,
+      "path_mean_abs": 0.006466411803423897,
+      "passed": true,
+      "gated": true
+    },
+    {
+      "name": "V8c [PyTorch unfused fp64] per-path state rel. error, real-world, 20 years (240 steps)",
+      "kind": "tol",
+      "max_rel": 5.244902107736619e-15,
+      "tol": 1e-10,
+      "passed": true
+    }
+  ],
+  "timings": [
+    {
+      "variant": "base (mortality, dynamic lapse, fee)",
+      "n_paths": 500000,
+      "n_steps": 120,
+      "numpy_fp64_s": 43.29836729999806,
+      "triton_fused_fp32_s": 0.029480500001227483,
+      "torch_unfused_fp32_s": 2.6650010000012117,
+      "note": "single wall-clock run incl. host copies; NOT a benchmark (phase 6)"
+    },
+    {
+      "variant": "resets + second deposit at t=2",
+      "n_paths": 500000,
+      "n_steps": 120,
+      "numpy_fp64_s": 46.37979400000768,
+      "triton_fused_fp32_s": 0.029545600002165884,
+      "torch_unfused_fp32_s": 2.4057644000131404,
+      "note": "single wall-clock run incl. host copies; NOT a benchmark (phase 6)"
+    },
+    {
+      "variant": "real-world, 20 years (240 steps)",
+      "n_paths": 500000,
+      "n_steps": 240,
+      "numpy_fp64_s": 86.64024049999716,
+      "triton_fused_fp32_s": 0.026540499995462596,
+      "torch_unfused_fp32_s": 5.03881569999794,
+      "note": "single wall-clock run incl. host copies; NOT a benchmark (phase 6)"
+    }
+  ]
+}

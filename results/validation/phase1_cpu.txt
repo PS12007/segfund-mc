@@ -1,58 +1,59 @@
-timestamp: 2026-11-13T02:16:13
-git_commit: ecc7e28
+timestamp: 2026-11-13T02:36:11
+git_commit: 4cfc39c
 python: 3.12.10
 numpy: 2.5.2
 platform: Windows-11-10.0.26200-SP0
 processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
 n_paths: 200000
 seed: 12345
-wall_s: 67.64649610000197
+wall_s: 264.7631110999937
+rng: Philox4x32-10 counter-based
 
 [PASS] V1 curve fit: model P(0,T) from step moments vs input curve, T = 1/12 .. 30
         max_rel_error=1.11e-15  tol=1e-12
 [PASS] V2a E[exp(-int_0^T r)] vs P(0,T), T=1
-        mc=0.97236613  se=1.23e-05  exact=0.97235662  z=+0.77
+        mc=0.97235724  se=1.23e-05  exact=0.97235662  z=+0.05
 [PASS] V2a E[exp(-int_0^T r)] vs P(0,T), T=2
-        mc=0.94177362  se=3.32e-05  exact=0.94176453  z=+0.27
+        mc=0.94173953  se=3.31e-05  exact=0.94176453  z=-0.75
 [PASS] V2a E[exp(-int_0^T r)] vs P(0,T), T=5
-        mc=0.84899836  se=0.000112  exact=0.84893834  z=+0.54
+        mc=0.84880863  se=0.000112  exact=0.84893834  z=-1.16
 [PASS] V2a E[exp(-int_0^T r)] vs P(0,T), T=10
-        mc=0.71207658  se=0.000245  exact=0.71196218  z=+0.47
+        mc=0.71186203  se=0.000245  exact=0.71196218  z=-0.41
 [PASS] V2a E[exp(-int_0^T r)] vs P(0,T), T=20
-        mc=0.50161016  se=0.000425  exact=0.50157812  z=+0.08
+        mc=0.50146332  se=0.000427  exact=0.50157812  z=-0.27
 [PASS] V2a E[exp(-int_0^T r)] vs P(0,T), T=30
-        mc=0.35363778  se=0.000502  exact=0.3534547  z=+0.37
+        mc=0.35341121  se=0.000504  exact=0.3534547  z=-0.09
 [PASS] V2b E[D(5) P(5,T|x5)] vs P(0,T), T=10
-        mc=0.71239913  se=0.000225  exact=0.71196218  z=+1.94
+        mc=0.71225653  se=0.000226  exact=0.71196218  z=+1.30
 [PASS] V2b E[D(5) P(5,T|x5)] vs P(0,T), T=20
-        mc=0.50217617  se=0.000298  exact=0.50157812  z=+2.01
+        mc=0.50194779  se=0.000298  exact=0.50157812  z=+1.24
 [PASS] V2b E[D(5) P(5,T|x5)] vs P(0,T), T=30
-        mc=0.35399951  se=0.000272  exact=0.3534547  z=+2.00
+        mc=0.35379205  se=0.000272  exact=0.3534547  z=+1.24
 [PASS] V2c inner MC P(5,10|x5=-0.01) vs closed form
-        mc=0.86951577  se=0.000115  exact=0.86944382  z=+0.63
+        mc=0.86933756  se=0.000115  exact=0.86944382  z=-0.93
 [PASS] V2c inner MC P(5,30|x5=-0.01) vs closed form
-        mc=0.45573063  se=0.000512  exact=0.45495463  z=+1.51
+        mc=0.45414771  se=0.00051  exact=0.45495463  z=-1.58
 [PASS] V2c inner MC P(5,10|x5=+0.01) vs closed form
-        mc=0.79588666  se=0.000105  exact=0.79582079  z=+0.63
+        mc=0.79572353  se=0.000105  exact=0.79582079  z=-0.93
 [PASS] V2c inner MC P(5,30|x5=+0.01) vs closed form
-        mc=0.34257953  se=0.000385  exact=0.3419962  z=+1.51
+        mc=0.34138962  se=0.000383  exact=0.3419962  z=-1.58
 [PASS] V3a E[D(T) F(T)] vs F0 exp(-mer T)
-        mc=79806.549  se=110  exact=79851.622  z=-0.41
+        mc=79886.527  se=110  exact=79851.622  z=+0.32
 [PASS] V3b PV(fee income), no decrements, vs closed form
-        mc=3577.4756  se=2.68  exact=3578.5769  z=-0.41
+        mc=3580.8948  se=2.68  exact=3578.5769  z=+0.86
 [PASS] V4 GMMB 75% vs Black-Scholes put (r=0.03, q=MER)
-        mc=5880.5967  se=22.4  exact=5885.3528  z=-0.21
+        mc=5899.0048  se=22.5  exact=5885.3528  z=+0.61
 [PASS] V4 GMMB 100% vs Black-Scholes put (r=0.03, q=MER)
-        mc=14503.871  se=38.2  exact=14505.141  z=-0.03
+        mc=14547.269  se=38.2  exact=14505.141  z=+1.10
 [PASS] V4 GMMB 125% vs Black-Scholes put (r=0.03, q=MER)
-        mc=26342.103  se=52.7  exact=26326.574  z=+0.29
+        mc=26419.387  se=52.7  exact=26326.574  z=+1.76
 [PASS] V5 GMDB+GMMB with mortality (age 70) vs semi-analytic sum of BS puts
-        mc=6972.9754  se=22.8  exact=6944.7949  z=+1.24
+        mc=6962.3348  se=22.8  exact=6944.7949  z=+0.77
 [PASS] V6 GMMB 100% under HW rates (sigma_r=1.5%, rho=-0.5) vs closed form
-        mc=11240.101  se=33.6  exact=11282.999  z=-1.28
+        mc=11232.307  se=33.6  exact=11282.999  z=-1.51
 [PASS] V6 GMMB 100% under HW rates (sigma_r=1.5%, rho=+0.0) vs closed form
-        mc=14189.199  se=43.2  exact=14178.918  z=+0.24
+        mc=14149.567  se=43.1  exact=14178.918  z=-0.68
 [PASS] V6 GMMB 100% under HW rates (sigma_r=1.5%, rho=+0.5) vs closed form
-        mc=16697.176  se=51.2  exact=16635.096  z=+1.21
+        mc=16646.655  se=51  exact=16635.096  z=+0.23
 
 23/23 passed (MC checks pass when |z| < 4.0)

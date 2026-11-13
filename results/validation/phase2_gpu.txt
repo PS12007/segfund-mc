@@ -1,0 +1,136 @@
+timestamp: 2026-11-13T02:45:29
+git_commit: 1d1feaf
+python: 3.12.10
+numpy: 2.5.2
+platform: Windows-11-10.0.26200-SP0
+processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
+gpu: NVIDIA GeForce RTX 5060 Laptop GPU
+compute_capability: 12.0
+torch: 2.12.0+cu130
+torch_cuda: 13.0
+triton: 3.8.0
+n_paths: 500000
+seed: 12345
+wall_s: 203.82873090000066
+
+[PASS] V7a Philox words, Triton == NumPy, seed=0x3039 step=0 paths=[0, 1048576)
+        words=4194304  mismatches=0
+[PASS] V7a Philox words, PyTorch == NumPy, seed=0x3039 step=0 paths=[0, 1048576)
+        words=4194304  mismatches=0
+[PASS] V7b normals, Triton fp32 vs NumPy fp64, seed=0x3039 step=0 paths=[0, 1048576)
+        max_abs=8.89e-07  mean_abs=5.46e-08  tol=1.0e-05
+[PASS] V7a Philox words, Triton == NumPy, seed=0xa4093822299f31d0 step=359 paths=[0, 1048576)
+        words=4194304  mismatches=0
+[PASS] V7a Philox words, PyTorch == NumPy, seed=0xa4093822299f31d0 step=359 paths=[0, 1048576)
+        words=4194304  mismatches=0
+[PASS] V7b normals, Triton fp32 vs NumPy fp64, seed=0xa4093822299f31d0 step=359 paths=[0, 1048576)
+        max_abs=8.55e-07  mean_abs=5.45e-08  tol=1.0e-05
+[PASS] V7a Philox words, Triton == NumPy, seed=0xffffffffffffffff step=7 paths=[2146435071, 2147483647)
+        words=4194304  mismatches=0
+[PASS] V7a Philox words, PyTorch == NumPy, seed=0xffffffffffffffff step=7 paths=[2146435071, 2147483647)
+        words=4194304  mismatches=0
+[PASS] V7b normals, Triton fp32 vs NumPy fp64, seed=0xffffffffffffffff step=7 paths=[2146435071, 2147483647)
+        max_abs=8.49e-07  mean_abs=5.45e-08  tol=1.0e-05
+[PASS] V8a [Triton fused fp32] per-path state rel. error, base (mortality, dynamic lapse, fee)
+        fund_T=3.24e-06  discount_T=3.12e-06  inforce_T=7.23e-06  tol=1.2e-04
+[PASS] V8b [Triton fused fp32] pv_net, base (mortality, dynamic lapse, fee)
+        gpu=721.810695  cpu=721.812716  diff=-2.02e-03 (-2.2e-04 SE)  per-path |d| max=1.87e-01 mean=6.84e-03
+[PASS] V8b [Triton fused fp32] pv_maturity_claims, base (mortality, dynamic lapse, fee)
+        gpu=3003.557419  cpu=3003.558892  diff=-1.47e-03 (-1.8e-04 SE)  per-path |d| max=1.84e-01 mean=5.45e-03
+[PASS] V8b [Triton fused fp32] pv_death_claims, base (mortality, dynamic lapse, fee)
+        gpu=269.284181  cpu=269.284284  diff=-1.03e-04 (-2.4e-04 SE)  per-path |d| max=5.35e-03 mean=2.92e-04
+[PASS] V8b [Triton fused fp32] pv_fees, base (mortality, dynamic lapse, fee)
+        gpu=2551.030905  cpu=2551.030460  diff=+4.45e-04 (+5.0e-04 SE)  per-path |d| max=2.21e-02 mean=1.46e-03
+[info: within tol] V8a [Triton fused fp32 FAST_MATH, not gated] per-path state rel. error, base (mortality, dynamic lapse, fee)
+        fund_T=3.22e-06  discount_T=4.56e-06  inforce_T=7.58e-06  tol=1.2e-04
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_net, base (mortality, dynamic lapse, fee)
+        gpu=721.813483  cpu=721.812716  diff=+7.67e-04 (+8.4e-05 SE)  per-path |d| max=1.80e-01 mean=1.24e-02
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_maturity_claims, base (mortality, dynamic lapse, fee)
+        gpu=3003.554293  cpu=3003.558892  diff=-4.60e-03 (-5.6e-04 SE)  per-path |d| max=1.77e-01 mean=7.89e-03
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_death_claims, base (mortality, dynamic lapse, fee)
+        gpu=269.283997  cpu=269.284284  diff=-2.87e-04 (-6.7e-04 SE)  per-path |d| max=4.57e-03 mean=4.17e-04
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_fees, base (mortality, dynamic lapse, fee)
+        gpu=2551.024807  cpu=2551.030460  diff=-5.65e-03 (-6.4e-03 SE)  per-path |d| max=4.20e-02 mean=5.65e-03
+[PASS] V8a [PyTorch unfused fp32] per-path state rel. error, base (mortality, dynamic lapse, fee)
+        fund_T=3.24e-06  discount_T=3.12e-06  inforce_T=7.23e-06  tol=1.2e-04
+[PASS] V8b [PyTorch unfused fp32] pv_net, base (mortality, dynamic lapse, fee)
+        gpu=721.810980  cpu=721.812716  diff=-1.74e-03 (-1.9e-04 SE)  per-path |d| max=1.83e-01 mean=6.79e-03
+[PASS] V8b [PyTorch unfused fp32] pv_maturity_claims, base (mortality, dynamic lapse, fee)
+        gpu=3003.557481  cpu=3003.558892  diff=-1.41e-03 (-1.7e-04 SE)  per-path |d| max=1.80e-01 mean=5.45e-03
+[PASS] V8b [PyTorch unfused fp32] pv_death_claims, base (mortality, dynamic lapse, fee)
+        gpu=269.284184  cpu=269.284284  diff=-9.99e-05 (-2.3e-04 SE)  per-path |d| max=5.23e-03 mean=2.93e-04
+[PASS] V8b [PyTorch unfused fp32] pv_fees, base (mortality, dynamic lapse, fee)
+        gpu=2551.030685  cpu=2551.030460  diff=+2.25e-04 (+2.5e-04 SE)  per-path |d| max=2.30e-02 mean=1.41e-03
+[PASS] V8c [PyTorch unfused fp64] per-path state rel. error, base (mortality, dynamic lapse, fee)
+        max_rel=3.18e-15  tol=1.0e-10
+[PASS] V8a [Triton fused fp32] per-path state rel. error, resets + second deposit at t=2
+        fund_T=3.25e-06  discount_T=3.12e-06  inforce_T=3.71e-06  tol=1.2e-04
+[PASS] V8b [Triton fused fp32] pv_net, resets + second deposit at t=2
+        gpu=2638.318714  cpu=2638.321132  diff=-2.42e-03 (-2.3e-04 SE)  per-path |d| max=1.53e-01 mean=8.02e-03
+[PASS] V8b [Triton fused fp32] pv_maturity_claims, resets + second deposit at t=2
+        gpu=4602.384016  cpu=4602.385253  diff=-1.24e-03 (-1.2e-04 SE)  per-path |d| max=1.52e-01 mean=7.00e-03
+[PASS] V8b [Triton fused fp32] pv_death_claims, resets + second deposit at t=2
+        gpu=377.415439  cpu=377.415478  diff=-3.88e-05 (-1.1e-04 SE)  per-path |d| max=4.17e-03 mean=2.95e-04
+[PASS] V8b [Triton fused fp32] pv_fees, resets + second deposit at t=2
+        gpu=2341.480741  cpu=2341.479600  diff=+1.14e-03 (+1.4e-03 SE)  per-path |d| max=1.32e-02 mean=1.37e-03
+[info: within tol] V8a [Triton fused fp32 FAST_MATH, not gated] per-path state rel. error, resets + second deposit at t=2
+        fund_T=2.94e-06  discount_T=4.56e-06  inforce_T=5.58e-06  tol=1.2e-04
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_net, resets + second deposit at t=2
+        gpu=2638.314861  cpu=2638.321132  diff=-6.27e-03 (-6.0e-04 SE)  per-path |d| max=3.30e-01 mean=1.65e-02
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_maturity_claims, resets + second deposit at t=2
+        gpu=4602.374444  cpu=4602.385253  diff=-1.08e-02 (-1.1e-03 SE)  per-path |d| max=3.51e-01 mean=1.39e-02
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_death_claims, resets + second deposit at t=2
+        gpu=377.414747  cpu=377.415478  diff=-7.31e-04 (-2.0e-03 SE)  per-path |d| max=6.80e-03 mean=7.64e-04
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_fees, resets + second deposit at t=2
+        gpu=2341.474330  cpu=2341.479600  diff=-5.27e-03 (-6.4e-03 SE)  per-path |d| max=3.54e-02 mean=5.27e-03
+[PASS] V8a [PyTorch unfused fp32] per-path state rel. error, resets + second deposit at t=2
+        fund_T=2.94e-06  discount_T=3.12e-06  inforce_T=3.71e-06  tol=1.2e-04
+[PASS] V8b [PyTorch unfused fp32] pv_net, resets + second deposit at t=2
+        gpu=2638.319043  cpu=2638.321132  diff=-2.09e-03 (-2.0e-04 SE)  per-path |d| max=1.53e-01 mean=7.92e-03
+[PASS] V8b [PyTorch unfused fp32] pv_maturity_claims, resets + second deposit at t=2
+        gpu=4602.384144  cpu=4602.385253  diff=-1.11e-03 (-1.1e-04 SE)  per-path |d| max=1.52e-01 mean=6.99e-03
+[PASS] V8b [PyTorch unfused fp32] pv_death_claims, resets + second deposit at t=2
+        gpu=377.415445  cpu=377.415478  diff=-3.31e-05 (-9.2e-05 SE)  per-path |d| max=4.05e-03 mean=2.96e-04
+[PASS] V8b [PyTorch unfused fp32] pv_fees, resets + second deposit at t=2
+        gpu=2341.480545  cpu=2341.479600  diff=+9.45e-04 (+1.1e-03 SE)  per-path |d| max=1.27e-02 mean=1.24e-03
+[PASS] V8c [PyTorch unfused fp64] per-path state rel. error, resets + second deposit at t=2
+        max_rel=3.49e-15  tol=1.0e-10
+[PASS] V8a [Triton fused fp32] per-path state rel. error, real-world, 20 years (240 steps)
+        fund_T=5.42e-06  discount_T=4.70e-06  inforce_T=1.42e-05  tol=2.4e-04
+[PASS] V8b [Triton fused fp32] pv_net, real-world, 20 years (240 steps)
+        gpu=-3789.210078  cpu=-3789.214211  diff=+4.13e-03 (+1.2e-03 SE)  per-path |d| max=2.09e-01 mean=7.40e-03
+[PASS] V8b [Triton fused fp32] pv_maturity_claims, real-world, 20 years (240 steps)
+        gpu=256.161073  cpu=256.161545  diff=-4.72e-04 (-2.4e-04 SE)  per-path |d| max=1.89e-01 mean=9.82e-04
+[PASS] V8b [Triton fused fp32] pv_death_claims, real-world, 20 years (240 steps)
+        gpu=246.655411  cpu=246.655676  diff=-2.66e-04 (-3.8e-04 SE)  per-path |d| max=2.64e-02 mean=4.63e-04
+[PASS] V8b [Triton fused fp32] pv_fees, real-world, 20 years (240 steps)
+        gpu=4292.026561  cpu=4292.031432  diff=-4.87e-03 (-2.5e-03 SE)  per-path |d| max=1.60e-01 mean=6.28e-03
+[info: within tol] V8a [Triton fused fp32 FAST_MATH, not gated] per-path state rel. error, real-world, 20 years (240 steps)
+        fund_T=6.49e-06  discount_T=8.01e-06  inforce_T=1.44e-05  tol=2.4e-04
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_net, real-world, 20 years (240 steps)
+        gpu=-3789.194642  cpu=-3789.214211  diff=+1.96e-02 (+5.5e-03 SE)  per-path |d| max=3.50e-01 mean=2.17e-02
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_maturity_claims, real-world, 20 years (240 steps)
+        gpu=256.160574  cpu=256.161545  diff=-9.70e-04 (-5.0e-04 SE)  per-path |d| max=3.11e-01 mean=1.36e-03
+[info: within tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_death_claims, real-world, 20 years (240 steps)
+        gpu=246.655214  cpu=246.655676  diff=-4.63e-04 (-6.7e-04 SE)  per-path |d| max=4.25e-02 mean=6.30e-04
+[info: OUTSIDE tol] V8b [Triton fused fp32 FAST_MATH, not gated] pv_fees, real-world, 20 years (240 steps)
+        gpu=4292.010430  cpu=4292.031432  diff=-2.10e-02 (-1.1e-02 SE)  per-path |d| max=2.49e-01 mean=2.10e-02
+[PASS] V8a [PyTorch unfused fp32] per-path state rel. error, real-world, 20 years (240 steps)
+        fund_T=8.43e-06  discount_T=5.17e-06  inforce_T=1.42e-05  tol=2.4e-04
+[PASS] V8b [PyTorch unfused fp32] pv_net, real-world, 20 years (240 steps)
+        gpu=-3789.209445  cpu=-3789.214211  diff=+4.77e-03 (+1.3e-03 SE)  per-path |d| max=3.61e-01 mean=7.49e-03
+[PASS] V8b [PyTorch unfused fp32] pv_maturity_claims, real-world, 20 years (240 steps)
+        gpu=256.161289  cpu=256.161545  diff=-2.56e-04 (-1.3e-04 SE)  per-path |d| max=3.24e-01 mean=9.36e-04
+[PASS] V8b [PyTorch unfused fp32] pv_death_claims, real-world, 20 years (240 steps)
+        gpu=246.655483  cpu=246.655676  diff=-1.93e-04 (-2.8e-04 SE)  per-path |d| max=3.27e-02 mean=4.40e-04
+[PASS] V8b [PyTorch unfused fp32] pv_fees, real-world, 20 years (240 steps)
+        gpu=4292.026217  cpu=4292.031432  diff=-5.22e-03 (-2.6e-03 SE)  per-path |d| max=1.60e-01 mean=6.47e-03
+[PASS] V8c [PyTorch unfused fp64] per-path state rel. error, real-world, 20 years (240 steps)
+        max_rel=5.24e-15  tol=1.0e-10
+
+42/42 gated checks passed (15 informational rows not gated)
+
+wall-clock (one run each, includes host copies; not a benchmark):
+  base (mortality, dynamic lapse, fee): numpy 43.30s | torch unfused 2.67s | triton fused 0.029s
+  resets + second deposit at t=2: numpy 46.38s | torch unfused 2.41s | triton fused 0.030s
+  real-world, 20 years (240 steps): numpy 86.64s | torch unfused 5.04s | triton fused 0.027s
