@@ -39,7 +39,7 @@ def _meta() -> dict:
 def cmd_run(args) -> int:
     from segfund.config import load_model
     from segfund.reference.engine import mean_and_se, simulate
-from segfund.rng.philox import PhiloxNormals
+    from segfund.rng.philox import PhiloxNormals
 
     m = load_model(args.config)
     n = args.paths or m.sim.n_paths
