@@ -51,6 +51,10 @@ class PathResults:
     # Value at T of 1 dollar invested at t=0 in the fund (same returns and MER as F,
     # but no later deposits). Underlying of the control variate.
     unit_T: np.ndarray
+    # End-of-run state (needed when a run is one segment of a nested simulation)
+    x_end: np.ndarray | None = None
+    gm_end: np.ndarray | None = None
+    gd_end: np.ndarray | None = None
 
     @property
     def n_paths(self) -> int:
@@ -111,8 +115,26 @@ def build_schedule(model: Model) -> Schedule:
     return Schedule(tab, q_death, deposits, fund_adds, _reset_steps(model, times))
 
 
-def simulate(model: Model, n_paths: int | None = None, rng=None, pathwise_delta: bool = False) -> PathResults:
+STATE_KEYS = ("x", "F", "GM", "GD", "l")
+
+
+def simulate(
+    model: Model,
+    n_paths: int | None = None,
+    rng=None,
+    pathwise_delta: bool = False,
+    k_start: int = 0,
+    k_end: int | None = None,
+    init_state: dict | None = None,
+) -> PathResults:
     """Simulate the contract. With pathwise_delta=True, also returns (results, dPV/dS0 per path).
+
+    Segments (nested simulation): simulate only steps [k_start, k_end). With
+    init_state = {"x", "F", "GM", "GD", "l"} (one value per path) the paths start
+    from that state at time t[k_start]; discount factor and unit fund restart at 1,
+    so PVs are as at t[k_start]. The maturity claim is only paid when k_end is
+    the last step. The end state is returned in x_end, gm_end, gd_end (plus
+    fund_T, inforce_T).
 
     Pathwise delta differentiates each path's PV with respect to the fund value S0
     just after the t=0 deposit, holding the guarantee fixed. It is only exact when
@@ -134,22 +156,25 @@ def simulate(model: Model, n_paths: int | None = None, rng=None, pathwise_delta:
 
     sch = build_schedule(model)
     tab, q_death, deposits, resets = sch.tab, sch.q_death, sch.deposits, sch.resets
-    if pathwise_delta and (len(c.deposits) > 1 or resets.any() or model.lapse.enabled):
-        raise ValueError("pathwise delta needs a single deposit, no resets and no dynamic lapse")
+    k_end = tab.n_steps if k_end is None else k_end
+    if not 0 <= k_start < k_end <= tab.n_steps:
+        raise ValueError("need 0 <= k_start < k_end <= n_steps")
+    final = k_end == tab.n_steps
+    if pathwise_delta and (len(c.deposits) > 1 or resets.any() or model.lapse.enabled or k_start or not final):
+        raise ValueError("pathwise delta needs a single deposit, no resets, no dynamic lapse and a full run")
     dpv = np.zeros(n) if pathwise_delta else None
 
-    x = np.zeros(n)
+    if init_state is not None:
+        x, F, G_M, G_D, l = (np.array(init_state[k], dtype=np.float64).reshape(n) for k in STATE_KEYS)
+    else:
+        x, F, G_M, G_D, l = np.zeros(n), np.zeros(n), np.zeros(n), np.zeros(n), np.ones(n)
     U = np.ones(n)
     D = np.ones(n)
-    F = np.zeros(n)
-    G_M = np.zeros(n)
-    G_D = np.zeros(n)
-    l = np.ones(n)
     pv_mat = np.zeros(n)
     pv_death = np.zeros(n)
     pv_fee = np.zeros(n)
 
-    for k in range(tab.n_steps):
+    for k in range(k_start, k_end):
         # 1. events at the start of the step
         if deposits[k] > 0:
             F += sch.fund_adds[k]
@@ -178,8 +203,9 @@ def simulate(model: Model, n_paths: int | None = None, rng=None, pathwise_delta:
             dpv += -D * deaths * (G_D > F) * U - D * l * c.guarantee_fee * tab.h[k] * U
         l = l * (1.0 - q_death[k]) * (1.0 - q_lapse)
 
-    pv_mat += D * l * np.maximum(G_M - F, 0.0)
-    res = PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U)
+    if final:
+        pv_mat += D * l * np.maximum(G_M - F, 0.0)
+    res = PathResults(pv_mat + pv_death - pv_fee, pv_mat, pv_death, pv_fee, F, D, l, U, x, G_M, G_D)
     if dpv is not None:
         dpv += -D * l * (G_M > F) * U
         return res, dpv

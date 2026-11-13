@@ -45,7 +45,8 @@ MASK32 = 0xFFFFFFFF
 N_ROUNDS = 10
 U23_SCALE = 2.0**-23
 
-STREAM_MAIN = 0  # c2 values; later phases use other streams (e.g. nested inner paths)
+STREAM_MAIN = 0  # c2 values: independent streams for the same (seed, path, step)
+STREAM_INNER = 1  # nested simulation: risk-neutral inner paths
 
 
 def philox4x32(c0, c1, c2, c3, seed: int, n_rounds: int = N_ROUNDS):
@@ -87,12 +88,18 @@ def normals3(path_ids, step: int, seed: int, stream: int = STREAM_MAIN) -> np.nd
 
 
 def antithetic_counter(ids: np.ndarray, half: int):
-    """Antithetic pairing used by every engine: path g < half uses counter g with +z;
-    path g >= half uses counter g - half with -z. half = 0 means no pairing."""
+    """Antithetic pairing used by every engine, in blocks of 2*half paths.
+
+    Within each block, path j < half uses its own counter with +z and path
+    j >= half reuses the counter of path j - half with -z. For a plain run
+    half = N/2, so the block is the whole run. For nested simulation the block is
+    one outer scenario's inner paths, so pairs never cross outer scenarios.
+    half = 0 means no pairing.
+    """
     ids = np.asarray(ids, dtype=np.uint64)
     if half <= 0:
         return ids, np.ones(ids.shape)
-    second = ids >= np.uint64(half)
+    second = (ids % np.uint64(2 * half)) >= np.uint64(half)
     ctr = np.where(second, ids - np.uint64(half), ids)
     return ctr, np.where(second, -1.0, 1.0)
 

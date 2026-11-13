@@ -53,6 +53,25 @@ def hw_gbm_put(hw: HullWhite, eq: EquityParams, F0: float, K, T: float, mer: flo
     return black_put(P, fwd, K, v2)
 
 
+def hw_gbm_put_at(hw: HullWhite, eq: EquityParams, t: float, x_t, F_t, K, T: float, mer: float):
+    """Risk-neutral value at time t of a put on the fund expiring at T, given x(t) and F(t).
+
+    Same argument as hw_gbm_put, conditional on the state at t: the zero-coupon
+    bond is the Hull-White closed form P(t, T | x_t), and the variance of ln F_T
+    given the state is the same deterministic function of tau = T - t. Vectorised
+    over arrays of (x_t, F_t, K).
+    """
+    tau = T - t
+    a, s = hw.a, hw.sigma
+    P = hw.zcb(t, T, np.asarray(x_t, dtype=np.float64))
+    fwd = np.asarray(F_t, dtype=np.float64) * math.exp(-mer * tau) / P
+    v2 = eq.sigma**2 * tau + float(var_int_x(a, s, tau)) + 2 * eq.rho * s * eq.sigma * (tau - float(B(a, tau))) / a
+    K = np.asarray(K, dtype=np.float64)
+    v = math.sqrt(v2)
+    d1 = (np.log(fwd / K) + 0.5 * v2) / v
+    return P * (K * norm_cdf(-(d1 - v)) - fwd * norm_cdf(-d1))
+
+
 def gmdb_gmmb_constant_rate(
     F0: float, G_D: float, G_M: float, T: float, r: float, mer: float, sigma: float, q_steps, times
 ):
