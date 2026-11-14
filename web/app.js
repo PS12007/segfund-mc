@@ -349,6 +349,25 @@
   const setP = (k, v) => { if (k === 'rate') params.curve.b0 = v; else params[k] = v; };
   const baseOf = (k) => (k === 'rate' ? SF.BASE.curve.b0 : SF.BASE[k]);
 
+  // shareable scenarios: dials that differ from the base contract live in the query string
+  (function readScenario() {
+    const q = new URLSearchParams(location.search);
+    for (const d of DIALS) {
+      if (!q.has(d.key)) continue;
+      const v = parseFloat(q.get(d.key));
+      if (isFinite(v)) setP(d.key, Math.min(d.max, Math.max(d.min, Math.round((v - d.min) / d.step) * d.step + d.min)));
+    }
+  })();
+  function writeScenario() {
+    const q = new URLSearchParams();
+    for (const d of DIALS) {
+      const v = getP(d.key);
+      if (Math.abs(v - baseOf(d.key)) > d.step / 2) q.set(d.key, +v.toFixed(5));
+    }
+    const s = q.toString();
+    try { history.replaceState(null, '', location.pathname + (s ? '?' + s : '') + location.hash); } catch (e) { /* file:// in some browsers */ }
+  }
+
   const Dials = (function () {
     const list = $('dial-list');
     const els = {};
@@ -364,7 +383,7 @@
       const input = wrap.querySelector('input'), out = wrap.querySelector('output');
       out.textContent = d.fmt(getP(d.key));
       input.addEventListener('input', () => { setP(d.key, +input.value); out.textContent = d.fmt(+input.value); Engine.request(params, N_DRAFT); });
-      input.addEventListener('change', () => Engine.request(params, N_FULL));
+      input.addEventListener('change', () => { writeScenario(); Engine.request(params, N_FULL); });
       els[d.key] = { input, out, d };
     }
     const reset = document.createElement('button');
@@ -372,6 +391,7 @@
     reset.textContent = 'return to the base contract';
     reset.addEventListener('click', () => {
       for (const d of DIALS) { setP(d.key, baseOf(d.key)); els[d.key].input.value = baseOf(d.key); els[d.key].out.textContent = d.fmt(baseOf(d.key)); }
+      writeScenario();
       Engine.request(params, N_FULL);
     });
     list.appendChild(reset);

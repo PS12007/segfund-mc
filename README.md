@@ -129,7 +129,9 @@ example from GitHub Pages). It has five parts:
 - **Dials:** volatility, floor, fee, age, rate level and equity risk premium.
   Turning one re-runs 16,384 risk-neutral and 16,384 real-world futures in a
   background thread. The ledger shows the cost of the guarantee, the fees, the
-  break-even fee, the chance of a loss and CTE(95).
+  break-even fee, the chance of a loss and CTE(95). The dial settings are kept
+  in the URL, so a scenario can be shared as a link (for example
+  [28% volatility, 100% floor](https://ps12007.github.io/segfund-mc/?sigmaS=0.28&gmmb=1)).
 - **The worst five percent:** drag across the loss histogram to see the futures
   behind any slice.
 - **Nested simulation:** one real-world year, then 512 risk-neutral futures from
