@@ -1,5 +1,5 @@
-timestamp: 2026-11-13T18:48:35
-git_commit: f3ffe5d
+timestamp: 2026-11-14T00:17:49
+git_commit: add9dc7-dirty
 python: 3.12.10
 numpy: 2.5.2
 platform: Windows-11-10.0.26200-SP0
@@ -11,7 +11,7 @@ torch_cuda: 13.0
 triton: 3.8.0
 seed: 20261113
 quick: False
-wall_s: 192.80651079997187
+wall_s: 564.8835305999964
 
 GPU: NVIDIA GeForce RTX 5060 Laptop GPU  max SM clock 3090 MHz  power limit [N/A]
 other python processes on the GPU at start: 0 (none; includes this one)
@@ -23,25 +23,35 @@ equality before timing (n = 65536 paths, same streams as the reference):
   [PASS] PyTorch unfused fp32, emulated Philox (bit-exact stream)  worst |mean diff| = 8.9e-05 SE
   [PASS] PyTorch unfused fp32, torch.randn (fair baseline)  z = +1.05
   [PASS] NumPy fp64 (CPU, reference)
+  [PASS] PyTorch + torch.compile per step, torch.randn  z = +1.05  per-path vs eager 1.5e-06 (tol 1.2e-04); first call 7.5 s
+  [PASS] PyTorch + torch.compile + CUDA graph, torch.randn  z = +1.05  per-path vs eager 1.5e-06 (tol 1.2e-04); first call 0.0 s
   engine                                                    paths   median ms             95% CI ms  path-steps/s  x NumPy  gate
-  NumPy fp64 (CPU, reference)                              16,384     321.618                     -     6.113e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
-  NumPy fp64 (CPU, reference)                              65,536    1445.793                     -     5.439e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
-  PyTorch unfused fp32, emulated Philox (bit-exact stream)     65,536     993.543   [980.239, 1017.347]     7.915e+06        1  ok
-  PyTorch unfused fp32, emulated Philox (bit-exact stream)    262,144    1022.565   [983.118, 1028.328]     3.076e+07        5  ok
-  PyTorch unfused fp32, torch.randn (fair baseline)        65,536      78.795      [76.960, 79.796]     9.981e+07       16  NOT quotable (IQR 5.2% > 5% of median)
-  PyTorch unfused fp32, torch.randn (fair baseline)       262,144      76.805      [74.682, 78.402]     4.096e+08       67  NOT quotable (IQR 5.4% > 5% of median)
-  PyTorch unfused fp32, torch.randn (fair baseline)     1,048,576      72.708      [72.196, 73.277]     1.731e+09      283  ok
-  PyTorch unfused fp32, torch.randn (fair baseline)     4,194,304     449.623    [449.300, 450.600]     1.119e+09      183  ok
-  Triton fused fp32 (default)                              65,536       0.419        [0.418, 0.419]     1.877e+10    3,071  ok
-  Triton fused fp32 (default)                             262,144       1.517        [1.515, 1.519]     2.074e+10    3,392  ok
-  Triton fused fp32 (default)                           1,048,576       5.770        [5.761, 5.805]     2.181e+10    3,567  ok
-  Triton fused fp32 (default)                           4,194,304      22.766      [22.665, 23.028]     2.211e+10    3,617  ok
-  Triton fused fp32 (default)                          16,777,216      91.343      [90.420, 93.974]     2.204e+10    3,605  NOT quotable (temperature limit)
-  Triton fused fp32 FAST_MATH (biased exp; timing only)     65,536       0.391        [0.390, 0.391]     2.013e+10    3,293  ok
-  Triton fused fp32 FAST_MATH (biased exp; timing only)    262,144       1.386        [1.386, 1.386]     2.270e+10    3,713  ok
-  Triton fused fp32 FAST_MATH (biased exp; timing only)  1,048,576       5.406        [5.379, 5.421]     2.328e+10    3,808  ok
-  Triton fused fp32 FAST_MATH (biased exp; timing only)  4,194,304      21.146      [21.106, 21.447]     2.380e+10    3,894  ok
-  Triton fused fp32 FAST_MATH (biased exp; timing only) 16,777,216      84.695      [83.763, 86.397]     2.377e+10    3,889  NOT quotable (temperature limit)
+  NumPy fp64 (CPU, reference)                              16,384     627.462                     -     3.133e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
+  NumPy fp64 (CPU, reference)                              65,536    3116.287                     -     2.524e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
+  PyTorch unfused fp32, emulated Philox (bit-exact stream)     65,536    2681.188  [2672.855, 2692.070]     2.933e+06        1  ok
+  PyTorch unfused fp32, emulated Philox (bit-exact stream)    262,144    2620.779  [2525.017, 2661.358]     1.200e+07        4  ok
+  PyTorch unfused fp32, torch.randn (fair baseline)        65,536     194.342    [191.713, 202.682]     4.047e+07       13  ok
+  PyTorch unfused fp32, torch.randn (fair baseline)       262,144     201.595    [195.385, 213.265]     1.560e+08       50  NOT quotable (IQR 8.4% > 5% of median)
+  PyTorch unfused fp32, torch.randn (fair baseline)     1,048,576     191.278    [181.590, 191.983]     6.578e+08      210  NOT quotable (IQR 5.0% > 5% of median)
+  PyTorch unfused fp32, torch.randn (fair baseline)     4,194,304     467.409    [466.114, 470.233]     1.077e+09      344  ok
+  PyTorch + torch.compile per step, torch.randn            65,536      54.806      [49.579, 59.589]     1.435e+08       46  NOT quotable (IQR 20.6% > 5% of median)
+  PyTorch + torch.compile per step, torch.randn           262,144      48.908      [47.389, 54.377]     6.432e+08      205  NOT quotable (IQR 22.2% > 5% of median)
+  PyTorch + torch.compile per step, torch.randn         1,048,576      59.971      [59.772, 60.252]     2.098e+09      670  ok
+  PyTorch + torch.compile per step, torch.randn         4,194,304     255.884    [255.444, 256.299]     1.967e+09      628  ok
+  PyTorch + torch.compile + CUDA graph, torch.randn        65,536      13.528      [13.392, 13.671]     5.813e+08      186  NOT quotable (IQR 6.3% > 5% of median)
+  PyTorch + torch.compile + CUDA graph, torch.randn       262,144      13.218      [12.979, 13.454]     2.380e+09      760  NOT quotable (IQR 8.2% > 5% of median)
+  PyTorch + torch.compile + CUDA graph, torch.randn     1,048,576      60.285      [59.882, 60.453]     2.087e+09      666  ok
+  PyTorch + torch.compile + CUDA graph, torch.randn     4,194,304     256.977    [255.611, 257.675]     1.959e+09      625  ok
+  Triton fused fp32 (default)                              65,536       0.458        [0.456, 0.459]     1.719e+10    5,486  NOT quotable (IQR 6.0% > 5% of median)
+  Triton fused fp32 (default)                             262,144       1.550        [1.547, 1.554]     2.029e+10    6,475  ok
+  Triton fused fp32 (default)                           1,048,576       5.768        [5.744, 5.840]     2.181e+10    6,962  NOT quotable (IQR 9.2% > 5% of median)
+  Triton fused fp32 (default)                           4,194,304      23.793      [23.497, 23.964]     2.115e+10    6,751  ok
+  Triton fused fp32 (default)                          16,777,216      94.393      [92.985, 96.122]     2.133e+10    6,807  ok
+  Triton fused fp32 FAST_MATH (biased exp; timing only)     65,536       0.429        [0.428, 0.431]     1.831e+10    5,844  NOT quotable (IQR 6.1% > 5% of median)
+  Triton fused fp32 FAST_MATH (biased exp; timing only)    262,144       1.427        [1.425, 1.429]     2.204e+10    7,034  ok
+  Triton fused fp32 FAST_MATH (biased exp; timing only)  1,048,576       5.335        [5.311, 5.374]     2.358e+10    7,527  NOT quotable (IQR 9.6% > 5% of median)
+  Triton fused fp32 FAST_MATH (biased exp; timing only)  4,194,304      22.078      [21.878, 22.223]     2.280e+10    7,275  ok
+  Triton fused fp32 FAST_MATH (biased exp; timing only) 16,777,216      91.077      [90.733, 92.850]     2.211e+10    7,055  ok
 
 == real-world 20y (240 steps) ==
 equality before timing (n = 65536 paths, same streams as the reference):
@@ -50,24 +60,34 @@ equality before timing (n = 65536 paths, same streams as the reference):
   [PASS] PyTorch unfused fp32, emulated Philox (bit-exact stream)  worst |mean diff| = 9.5e-04 SE
   [PASS] PyTorch unfused fp32, torch.randn (fair baseline)  z = +1.09
   [PASS] NumPy fp64 (CPU, reference)
+  [PASS] PyTorch + torch.compile per step, torch.randn  z = +1.09  per-path vs eager 5.6e-06 (tol 2.4e-04); first call 0.1 s
+  [PASS] PyTorch + torch.compile + CUDA graph, torch.randn  z = +1.09  per-path vs eager 5.6e-06 (tol 2.4e-04); first call 0.0 s
   engine                                                    paths   median ms             95% CI ms  path-steps/s  x NumPy  gate
-  NumPy fp64 (CPU, reference)                              16,384     631.075                     -     6.231e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
-  NumPy fp64 (CPU, reference)                              65,536    2789.936                     -     5.638e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
-  PyTorch unfused fp32, emulated Philox (bit-exact stream)     65,536    1854.243  [1837.512, 1917.575]     8.483e+06        1  NOT quotable (SM clock below 70% of max in window)
-  PyTorch unfused fp32, emulated Philox (bit-exact stream)    262,144    2013.350  [1973.154, 2035.700]     3.125e+07        5  ok
-  PyTorch unfused fp32, torch.randn (fair baseline)        65,536     153.850    [151.805, 162.630]     1.022e+08       16  ok
-  PyTorch unfused fp32, torch.randn (fair baseline)       262,144     149.217    [147.501, 152.913]     4.216e+08       68  ok
-  PyTorch unfused fp32, torch.randn (fair baseline)     1,048,576     146.371    [145.013, 147.645]     1.719e+09      276  ok
-  PyTorch unfused fp32, torch.randn (fair baseline)     4,194,304     897.379    [896.606, 897.649]     1.122e+09      180  ok
-  Triton fused fp32 (default)                              65,536       0.791        [0.790, 0.791]     1.989e+10    3,191  ok
-  Triton fused fp32 (default)                             262,144       2.939        [2.936, 2.943]     2.140e+10    3,435  ok
-  Triton fused fp32 (default)                           1,048,576      11.425      [11.411, 11.462]     2.203e+10    3,535  ok
-  Triton fused fp32 (default)                           4,194,304      45.887      [45.274, 46.709]     2.194e+10    3,521  NOT quotable (temperature limit)
-  Triton fused fp32 (default)                          16,777,216     182.231    [179.390, 189.720]     2.210e+10    3,546  NOT quotable (temperature limit)
-  Triton fused fp32 FAST_MATH (biased exp; timing only)     65,536       0.753        [0.751, 0.755]     2.089e+10    3,352  NOT quotable (IQR 5.0% > 5% of median)
-  Triton fused fp32 FAST_MATH (biased exp; timing only)    262,144       2.752        [2.750, 2.754]     2.286e+10    3,669  ok
-  Triton fused fp32 FAST_MATH (biased exp; timing only)  1,048,576      10.647      [10.614, 10.678]     2.364e+10    3,794  ok
-  Triton fused fp32 FAST_MATH (biased exp; timing only)  4,194,304      42.331      [41.971, 43.016]     2.378e+10    3,816  NOT quotable (temperature limit)
-  Triton fused fp32 FAST_MATH (biased exp; timing only) 16,777,216     167.867    [166.145, 174.630]     2.399e+10    3,850  NOT quotable (temperature limit)
+  NumPy fp64 (CPU, reference)                              16,384    1272.695                     -     3.090e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
+  NumPy fp64 (CPU, reference)                              65,536    5723.177                     -     2.748e+06        1  NOT quotable (CPU row: clocks not monitored (not clock-gated))
+  PyTorch unfused fp32, emulated Philox (bit-exact stream)     65,536    5533.191  [5300.481, 5644.226]     2.843e+06        1  ok
+  PyTorch unfused fp32, emulated Philox (bit-exact stream)    262,144    5146.020  [5056.707, 5171.332]     1.223e+07        4  ok
+  PyTorch unfused fp32, torch.randn (fair baseline)        65,536     397.389    [337.171, 401.606]     3.958e+07       13  NOT quotable (IQR 5.9% > 5% of median)
+  PyTorch unfused fp32, torch.randn (fair baseline)       262,144     391.111    [369.445, 395.287]     1.609e+08       52  ok
+  PyTorch unfused fp32, torch.randn (fair baseline)     1,048,576     358.789    [353.293, 368.056]     7.014e+08      227  ok
+  PyTorch unfused fp32, torch.randn (fair baseline)     4,194,304     933.394    [933.224, 934.412]     1.078e+09      349  ok
+  PyTorch + torch.compile per step, torch.randn            65,536      97.011     [93.876, 103.575]     1.621e+08       52  NOT quotable (IQR 11.3% > 5% of median)
+  PyTorch + torch.compile per step, torch.randn           262,144     101.024     [94.607, 105.798]     6.228e+08      202  NOT quotable (IQR 13.0% > 5% of median)
+  PyTorch + torch.compile per step, torch.randn         1,048,576     119.072    [118.605, 119.227]     2.113e+09      684  ok
+  PyTorch + torch.compile per step, torch.randn         4,194,304     509.873    [509.039, 510.063]     1.974e+09      639  ok
+  PyTorch + torch.compile + CUDA graph, torch.randn        65,536      26.646      [26.200, 27.020]     5.903e+08      191  NOT quotable (IQR 6.9% > 5% of median)
+  PyTorch + torch.compile + CUDA graph, torch.randn       262,144      25.710      [25.466, 25.866]     2.447e+09      792  ok
+  PyTorch + torch.compile + CUDA graph, torch.randn     1,048,576     119.125    [119.090, 119.405]     2.113e+09      684  ok
+  PyTorch + torch.compile + CUDA graph, torch.randn     4,194,304     512.487    [511.305, 514.226]     1.964e+09      636  ok
+  Triton fused fp32 (default)                              65,536       0.825        [0.824, 0.826]     1.907e+10    6,171  ok
+  Triton fused fp32 (default)                             262,144       2.970        [2.966, 2.975]     2.118e+10    6,856  ok
+  Triton fused fp32 (default)                           1,048,576      11.980      [11.947, 12.017]     2.101e+10    6,799  ok
+  Triton fused fp32 (default)                           4,194,304      47.322      [46.844, 47.793]     2.127e+10    6,885  ok
+  Triton fused fp32 (default)                          16,777,216     189.032    [186.214, 192.248]     2.130e+10    6,894  ok
+  Triton fused fp32 FAST_MATH (biased exp; timing only)     65,536       0.799        [0.798, 0.801]     1.968e+10    6,368  ok
+  Triton fused fp32 FAST_MATH (biased exp; timing only)    262,144       2.758        [2.753, 2.761]     2.281e+10    7,384  ok
+  Triton fused fp32 FAST_MATH (biased exp; timing only)  1,048,576      11.166      [11.077, 11.254]     2.254e+10    7,295  NOT quotable (IQR 5.8% > 5% of median)
+  Triton fused fp32 FAST_MATH (biased exp; timing only)  4,194,304      44.028      [43.674, 44.287]     2.286e+10    7,400  ok
+  Triton fused fp32 FAST_MATH (biased exp; timing only) 16,777,216     175.094    [171.535, 179.613]     2.300e+10    7,443  ok
 
 x NumPy = throughput ratio (path-steps/s) against the best NumPy row of the same scenario.
