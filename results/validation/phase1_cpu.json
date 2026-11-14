@@ -1,14 +1,14 @@
 {
   "meta": {
-    "timestamp": "2026-11-13T04:03:15",
-    "git_commit": "cbbc7d2",
+    "timestamp": "2026-11-13T18:58:10",
+    "git_commit": "f3ffe5d-dirty",
     "python": "3.12.10",
     "numpy": "2.5.2",
     "platform": "Windows-11-10.0.26200-SP0",
     "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
     "n_paths": 200000,
     "seed": 12345,
-    "wall_s": 473.26475590000337,
+    "wall_s": 336.60540010000113,
     "rng": "Philox4x32-10 counter-based"
   },
   "checks": [
@@ -331,6 +331,26 @@
       "se": 0.0004156428769374136,
       "exact": -0.1689150316460284,
       "z": -1.2096441813593368,
+      "passed": true
+    },
+    {
+      "name": "V13a nested inner values vs closed-form put at t0 (64 outer states, GMMB only, HW rates)",
+      "kind": "mc",
+      "mc": 11813.009858840322,
+      "se": 59.54525144894497,
+      "exact": 11920.623164692297,
+      "z": -1.8072525219621156,
+      "passed": true,
+      "max_abs_z": 2.901714104666912,
+      "rms_z": 1.0681285315883127
+    },
+    {
+      "name": "V13b tower property: mean nested loss (risk-neutral outer, t0 = 1y) vs direct time-0 PV",
+      "kind": "mc",
+      "mc": 665.8271017772515,
+      "se": 32.40570229158453,
+      "exact": 717.6550014220325,
+      "z": -1.5993450528686788,
       "passed": true
     }
   ]

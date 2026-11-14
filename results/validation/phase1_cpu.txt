@@ -1,12 +1,12 @@
-timestamp: 2026-11-13T04:03:15
-git_commit: cbbc7d2
+timestamp: 2026-11-13T18:58:10
+git_commit: f3ffe5d-dirty
 python: 3.12.10
 numpy: 2.5.2
 platform: Windows-11-10.0.26200-SP0
 processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
 n_paths: 200000
 seed: 12345
-wall_s: 473.26475590000337
+wall_s: 336.60540010000113
 rng: Philox4x32-10 counter-based
 
 [PASS] V1 curve fit: model P(0,T) from step moments vs input curve, T = 1/12 .. 30
@@ -77,5 +77,9 @@ rng: Philox4x32-10 counter-based
         mc=-20.193269  se=0.0595  exact=-20.126718  z=-1.12  analytic=-20.124785
 [PASS] V12c pathwise delta vs CRN central difference (h=0.1%), HW rates + mortality + fees, same paths
         mc=-0.1689303  se=0.000416  exact=-0.16891503  z=-1.21
+[PASS] V13a nested inner values vs closed-form put at t0 (64 outer states, GMMB only, HW rates)
+        mc=11813.01  se=59.5  exact=11920.623  z=-1.81
+[PASS] V13b tower property: mean nested loss (risk-neutral outer, t0 = 1y) vs direct time-0 PV
+        mc=665.8271  se=32.4  exact=717.655  z=-1.60
 
-34/34 passed (MC checks pass when |z| < 4.0)
+36/36 passed (MC checks pass when |z| < 4.0)
