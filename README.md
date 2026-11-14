@@ -6,6 +6,11 @@ Gompertz-Makeham mortality and dynamic lapses. It has a NumPy fp64 reference
 engine, an unfused PyTorch GPU engine and a fused Triton kernel, running natively
 on Windows.
 
+**Interactive page: [ps12007.github.io/segfund-mc](https://ps12007.github.io/segfund-mc/)**.
+The model runs live in your browser.
+
+[![Below the Floor](web/og.jpg)](https://ps12007.github.io/segfund-mc/)
+
 **This is a teaching model. It is not actuarially approved, not regulatory-grade,
 and its assumptions are illustrative.**
 
