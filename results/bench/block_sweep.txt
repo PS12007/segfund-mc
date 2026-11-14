@@ -1,0 +1,36 @@
+timestamp: 2026-11-13T19:08:53
+git_commit: f3ffe5d-dirty
+python: 3.12.10
+numpy: 2.5.2
+platform: Windows-11-10.0.26200-SP0
+processor: Intel64 Family 6 Model 183 Stepping 1, GenuineIntel
+gpu: NVIDIA GeForce RTX 5060 Laptop GPU
+compute_capability: 12.0
+torch: 2.12.0+cu130
+torch_cuda: 13.0
+triton: 3.8.0
+gpu_static: {'name': 'NVIDIA GeForce RTX 5060 Laptop GPU', 'driver_version': '610.47', 'clocks.max.sm': '3090', 'power.limit': '[N/A]'}
+n_paths: 1048576
+seed: 6
+
+Fused kernel launch-shape sweep: base contract, 1,048,576 paths x 120 steps, seed 6
+ BLOCK warps  median ms            95% CI ms vs default  equal  gate
+    64     1      9.824       [9.821, 9.830]      1.706     NO  NOT quotable (SM clock below 70% of max in window)
+    64     2      5.999       [5.982, 6.017]      1.042     NO  ok
+   128     1      5.527       [5.522, 5.532]      0.960     NO  ok
+   128     2      5.759       [5.742, 5.787]      1.000    yes  ok
+   128     4      6.070       [6.054, 6.089]      1.054     NO  ok
+   256     1      6.460       [6.452, 6.474]      1.122     NO  ok
+   256     2      5.566       [5.555, 5.572]      0.966     NO  ok
+   256     4      5.759       [5.741, 5.777]      1.000    yes  ok
+   256     8      6.093       [6.080, 6.105]      1.058     NO  ok
+   512     1     11.093     [11.082, 11.098]      1.926     NO  ok
+   512     2      6.481       [6.478, 6.485]      1.125     NO  ok
+   512     4      5.572       [5.559, 5.581]      0.968     NO  ok
+   512     8      5.557       [5.548, 5.570]      0.965    yes  ok
+  1024     1     20.541     [20.528, 20.551]      3.567     NO  ok
+  1024     2     10.511     [10.501, 10.518]      1.825     NO  ok
+  1024     4      6.471       [6.468, 6.473]      1.124     NO  ok
+  1024     8      5.595       [5.592, 5.601]      0.972     NO  ok
+
+fastest quotable: BLOCK=128 num_warps=1 (5.527 ms, 0.960x the default's time)

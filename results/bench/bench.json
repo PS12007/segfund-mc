@@ -1,0 +1,1649 @@
+{
+  "meta": {
+    "timestamp": "2026-11-13T18:48:35",
+    "git_commit": "f3ffe5d",
+    "python": "3.12.10",
+    "numpy": "2.5.2",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+    "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "compute_capability": "12.0",
+    "torch": "2.12.0+cu130",
+    "torch_cuda": "13.0",
+    "triton": "3.8.0",
+    "seed": 20261113,
+    "quick": false,
+    "wall_s": 192.80651079997187
+  },
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "driver_version": "610.47",
+    "clocks.max.sm": "3090",
+    "power.limit": "[N/A]"
+  },
+  "gpu_processes_before": [
+    {
+      "pid": "15788",
+      "name": "[Insufficient Permissions]",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "17072",
+      "name": "explorer.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "31488",
+      "name": "ShellExperienceHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "30748",
+      "name": "IGCC.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "29592",
+      "name": "ApplicationFrameHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "28228",
+      "name": "SystemSettings.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "17328",
+      "name": "LockApp.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "16692",
+      "name": "Nahimic3.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "25328",
+      "name": "claude.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "30224",
+      "name": "claude.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "24624",
+      "name": "msedge.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "37328",
+      "name": "PhoneExperienceHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "15416",
+      "name": "ShellHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "24100",
+      "name": "Code.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "3272",
+      "name": "chrome.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "30528",
+      "name": "TextInputHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "26796",
+      "name": "NVIDIA Overlay.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "16280",
+      "name": "NVIDIA Overlay.exe",
+      "mem": "[N/A]"
+    }
+  ],
+  "gpu_processes_after": [
+    {
+      "pid": "15788",
+      "name": "[Insufficient Permissions]",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "17072",
+      "name": "explorer.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "31488",
+      "name": "ShellExperienceHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "30748",
+      "name": "IGCC.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "29592",
+      "name": "ApplicationFrameHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "28228",
+      "name": "SystemSettings.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "17328",
+      "name": "LockApp.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "16692",
+      "name": "Nahimic3.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "25328",
+      "name": "claude.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "30224",
+      "name": "claude.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "24624",
+      "name": "msedge.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "37328",
+      "name": "PhoneExperienceHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "15416",
+      "name": "ShellHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "24100",
+      "name": "Code.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "3272",
+      "name": "chrome.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "30528",
+      "name": "TextInputHost.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "26796",
+      "name": "NVIDIA Overlay.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "16280",
+      "name": "NVIDIA Overlay.exe",
+      "mem": "[N/A]"
+    },
+    {
+      "pid": "18212",
+      "name": "python.exe",
+      "mem": "[N/A]"
+    }
+  ],
+  "n_check": 65536,
+  "seed": 20261113,
+  "checks": {
+    "base 10y (120 steps)": {
+      "triton_fused_fp32": {
+        "passed": true,
+        "failed": [],
+        "worst_mean_diff_over_se": 0.00017860252618938816,
+        "n_check": 65536
+      },
+      "triton_fused_fp32_fastmath": {
+        "passed": true,
+        "failed": [],
+        "worst_mean_diff_over_se": 0.0023057748353680014,
+        "n_check": 65536,
+        "note": "not gated: FAST_MATH exp is biased (LEARNING 2.5); timed to show what it buys"
+      },
+      "torch_philox_fp32": {
+        "passed": true,
+        "failed": [],
+        "worst_mean_diff_over_se": 8.942367302643875e-05,
+        "n_check": 65536
+      },
+      "torch_randn_fp32": {
+        "passed": true,
+        "failed": [],
+        "z_vs_reference": 1.0489268251293566,
+        "mean_ref": 731.0438677949743,
+        "mean_randn": 768.3503115929873,
+        "n_check": 65536,
+        "note": "different random numbers: |mean diff| <= 4 combined SE"
+      },
+      "numpy_fp64": {
+        "passed": true,
+        "failed": [],
+        "note": "is the reference"
+      }
+    },
+    "real-world 20y (240 steps)": {
+      "triton_fused_fp32": {
+        "passed": true,
+        "failed": [],
+        "worst_mean_diff_over_se": 0.0008887138645052244,
+        "n_check": 65536
+      },
+      "triton_fused_fp32_fastmath": {
+        "passed": true,
+        "failed": [],
+        "worst_mean_diff_over_se": 0.003843255748235963,
+        "n_check": 65536,
+        "note": "not gated: FAST_MATH exp is biased (LEARNING 2.5); timed to show what it buys"
+      },
+      "torch_philox_fp32": {
+        "passed": true,
+        "failed": [],
+        "worst_mean_diff_over_se": 0.0009516866025601833,
+        "n_check": 65536
+      },
+      "torch_randn_fp32": {
+        "passed": true,
+        "failed": [],
+        "z_vs_reference": 1.0927147002015076,
+        "mean_ref": -3795.1095587576006,
+        "mean_randn": -3779.896587083394,
+        "n_check": 65536,
+        "note": "different random numbers: |mean diff| <= 4 combined SE"
+      },
+      "numpy_fp64": {
+        "passed": true,
+        "failed": [],
+        "note": "is the reference"
+      }
+    }
+  },
+  "rows": [
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "numpy_fp64",
+      "n_paths": 16384,
+      "n_steps": 120,
+      "path_steps_per_s": 6113094.486404593,
+      "n_reps": 3,
+      "median_ms": 321.617800014792,
+      "min_ms": 319.8907000187319,
+      "max_ms": 324.24870002432726,
+      "quotable": false,
+      "reasons": [
+        "CPU row: clocks not monitored (not clock-gated)"
+      ]
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "numpy_fp64",
+      "n_paths": 65536,
+      "n_steps": 120,
+      "path_steps_per_s": 5439448.994634807,
+      "n_reps": 3,
+      "median_ms": 1445.7934999954887,
+      "min_ms": 1428.6540999892168,
+      "max_ms": 1454.884899983881,
+      "quotable": false,
+      "reasons": [
+        "CPU row: clocks not monitored (not clock-gated)"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "numpy_fp64",
+      "n_paths": 16384,
+      "n_steps": 240,
+      "path_steps_per_s": 6230893.706949383,
+      "n_reps": 3,
+      "median_ms": 631.0748000105377,
+      "min_ms": 625.7833000272512,
+      "max_ms": 632.4034999997821,
+      "quotable": false,
+      "reasons": [
+        "CPU row: clocks not monitored (not clock-gated)"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "numpy_fp64",
+      "n_paths": 65536,
+      "n_steps": 240,
+      "path_steps_per_s": 5637634.698398862,
+      "n_reps": 3,
+      "median_ms": 2789.9360000155866,
+      "min_ms": 2759.227499976987,
+      "max_ms": 2818.513800011715,
+      "quotable": false,
+      "reasons": [
+        "CPU row: clocks not monitored (not clock-gated)"
+      ]
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "torch_philox_fp32",
+      "n_paths": 65536,
+      "n_steps": 120,
+      "path_steps_per_s": 7915427.262474864,
+      "n_reps": 5,
+      "median_ms": 993.5433349609375,
+      "ci95_ms": [
+        980.2387084960938,
+        1017.3470458984375
+      ],
+      "iqr_frac": 0.022363325608079607,
+      "clocks": {
+        "n_samples": 48,
+        "sm_mhz_min": 2812.0,
+        "sm_mhz_max": 2812.0,
+        "sm_mhz_mean": 2812.0,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 50.0,
+        "temp_c_max": 52.0,
+        "temp_c_mean": 51.145833333333336,
+        "power_w_min": 32.37,
+        "power_w_max": 33.03,
+        "power_w_mean": 32.72645833333333,
+        "util_pct_min": 18.0,
+        "util_pct_max": 19.0,
+        "util_pct_mean": 18.395833333333332,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 2.9411611557006836,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "torch_philox_fp32",
+      "n_paths": 262144,
+      "n_steps": 120,
+      "path_steps_per_s": 30763101.159086555,
+      "n_reps": 5,
+      "median_ms": 1022.5653076171875,
+      "ci95_ms": [
+        983.11767578125,
+        1028.3277587890625
+      ],
+      "iqr_frac": 0.014155670594751849,
+      "clocks": {
+        "n_samples": 49,
+        "sm_mhz_min": 2790.0,
+        "sm_mhz_max": 2805.0,
+        "sm_mhz_mean": 2792.1020408163267,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 55.0,
+        "temp_c_max": 57.0,
+        "temp_c_mean": 56.12244897959184,
+        "power_w_min": 47.4,
+        "power_w_max": 48.88,
+        "power_w_mean": 48.4834693877551,
+        "util_pct_min": 27.0,
+        "util_pct_max": 29.0,
+        "util_pct_mean": 28.081632653061224,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 2.9764292240142822,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 65536,
+      "n_steps": 120,
+      "path_steps_per_s": 99807500.29253562,
+      "n_reps": 20,
+      "median_ms": 78.79487991333008,
+      "ci95_ms": [
+        76.96026992797852,
+        79.79590606689453
+      ],
+      "iqr_frac": 0.05159129931076819,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2797.0,
+        "sm_mhz_max": 2797.0,
+        "sm_mhz_mean": 2797.0,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 55.0,
+        "temp_c_max": 55.0,
+        "temp_c_mean": 55.0,
+        "power_w_min": 32.82,
+        "power_w_max": 36.69,
+        "power_w_mean": 33.147333333333336,
+        "util_pct_min": 16.0,
+        "util_pct_max": 17.0,
+        "util_pct_mean": 16.333333333333332,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.1111671924591064,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": false,
+      "reasons": [
+        "IQR 5.2% > 5% of median"
+      ]
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 262144,
+      "n_steps": 120,
+      "path_steps_per_s": 409575510.09063685,
+      "n_reps": 20,
+      "median_ms": 76.80459213256836,
+      "ci95_ms": [
+        74.68230438232422,
+        78.40238189697266
+      ],
+      "iqr_frac": 0.05430266909037774,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2790.0,
+        "sm_mhz_max": 2790.0,
+        "sm_mhz_mean": 2790.0,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 57.0,
+        "temp_c_max": 57.0,
+        "temp_c_mean": 57.0,
+        "power_w_min": 42.57,
+        "power_w_max": 44.57,
+        "power_w_mean": 43.843333333333334,
+        "util_pct_min": 21.0,
+        "util_pct_max": 23.0,
+        "util_pct_mean": 21.866666666666667,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.144361972808838,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": false,
+      "reasons": [
+        "IQR 5.4% > 5% of median"
+      ]
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 1048576,
+      "n_steps": 120,
+      "path_steps_per_s": 1730598292.9183314,
+      "n_reps": 21,
+      "median_ms": 72.70845031738281,
+      "ci95_ms": [
+        72.19590759277344,
+        73.27721405029297
+      ],
+      "iqr_frac": 0.02055688736733794,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2722.0,
+        "sm_mhz_max": 2722.0,
+        "sm_mhz_mean": 2722.0,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 62.0,
+        "temp_c_max": 64.0,
+        "temp_c_mean": 62.8,
+        "power_w_min": 81.85,
+        "power_w_max": 83.65,
+        "power_w_mean": 82.32533333333332,
+        "util_pct_min": 64.0,
+        "util_pct_max": 67.0,
+        "util_pct_mean": 65.13333333333334,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.128720760345459,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 4194304,
+      "n_steps": 120,
+      "path_steps_per_s": 1119417786.5063274,
+      "n_reps": 5,
+      "median_ms": 449.6234436035156,
+      "ci95_ms": [
+        449.3004455566406,
+        450.59954833984375
+      ],
+      "iqr_frac": 0.001362427503320548,
+      "clocks": {
+        "n_samples": 22,
+        "sm_mhz_min": 2790.0,
+        "sm_mhz_max": 2797.0,
+        "sm_mhz_mean": 2795.090909090909,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 65.0,
+        "temp_c_max": 66.0,
+        "temp_c_mean": 65.27272727272727,
+        "power_w_min": 90.9,
+        "power_w_max": 91.35,
+        "power_w_mean": 91.11545454545454,
+        "util_pct_min": 99.0,
+        "util_pct_max": 99.0,
+        "util_pct_mean": 99.0,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.8000547885894775,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 65536,
+      "n_steps": 120,
+      "path_steps_per_s": 18771768965.577488,
+      "n_reps": 3313,
+      "median_ms": 0.41894400119781494,
+      "ci95_ms": [
+        0.41836801171302795,
+        0.41945600509643555
+      ],
+      "iqr_frac": 0.03719826983997357,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2662.0,
+        "sm_mhz_max": 2700.0,
+        "sm_mhz_mean": 2673.3333333333335,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 11001.0,
+        "mem_mhz_mean": 9401.0,
+        "temp_c_min": 76.0,
+        "temp_c_max": 77.0,
+        "temp_c_mean": 76.2,
+        "power_w_min": 93.21,
+        "power_w_max": 98.51,
+        "power_w_mean": 96.33999999999999,
+        "util_pct_min": 83.0,
+        "util_pct_max": 88.0,
+        "util_pct_mean": 84.93333333333334,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.0909779071807861,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 262144,
+      "n_steps": 120,
+      "path_steps_per_s": 20737927850.113865,
+      "n_reps": 957,
+      "median_ms": 1.5168960094451904,
+      "ci95_ms": [
+        1.515071988105774,
+        1.5186560153961182
+      ],
+      "iqr_frac": 0.02518828421631533,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2707.0,
+        "sm_mhz_max": 2707.0,
+        "sm_mhz_mean": 2707.0,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 81.0,
+        "temp_c_max": 81.0,
+        "temp_c_mean": 81.0,
+        "power_w_min": 109.2,
+        "power_w_max": 112.25,
+        "power_w_mean": 110.93857142857142,
+        "util_pct_min": 92.0,
+        "util_pct_max": 95.0,
+        "util_pct_mean": 93.35714285714286,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.8565549850463867,
+        "cooldown_seconds": 0.5013647079467773
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 1048576,
+      "n_steps": 120,
+      "path_steps_per_s": 21806082911.096157,
+      "n_reps": 256,
+      "median_ms": 5.770367860794067,
+      "ci95_ms": [
+        5.760799884796143,
+        5.804703950881958
+      ],
+      "iqr_frac": 0.030589343484607096,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2587.0,
+        "sm_mhz_max": 2722.0,
+        "sm_mhz_mean": 2670.5333333333333,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 84.0,
+        "temp_c_max": 85.0,
+        "temp_c_mean": 84.66666666666667,
+        "power_w_min": 114.62,
+        "power_w_max": 115.61,
+        "power_w_mean": 115.12400000000001,
+        "util_pct_min": 97.0,
+        "util_pct_max": 98.0,
+        "util_pct_mean": 97.6,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.8599469661712646,
+        "cooldown_seconds": 0.5010795593261719
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 4194304,
+      "n_steps": 120,
+      "path_steps_per_s": 22108672398.336624,
+      "n_reps": 65,
+      "median_ms": 22.765567779541016,
+      "ci95_ms": [
+        22.665119171142578,
+        23.02783966064453
+      ],
+      "iqr_frac": 0.031213381956035475,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2572.0,
+        "sm_mhz_max": 2715.0,
+        "sm_mhz_mean": 2655.8571428571427,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 84.0,
+        "temp_c_max": 86.0,
+        "temp_c_mean": 84.85714285714286,
+        "power_w_min": 113.86,
+        "power_w_max": 116.19,
+        "power_w_mean": 114.80857142857144,
+        "util_pct_min": 99.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 99.21428571428571,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 2.0184519290924072,
+        "cooldown_seconds": 0.5051045417785645
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 16777216,
+      "n_steps": 120,
+      "path_steps_per_s": 22040619247.83883,
+      "n_reps": 20,
+      "median_ms": 91.34343719482422,
+      "ci95_ms": [
+        90.41976165771484,
+        93.97447967529297
+      ],
+      "iqr_frac": 0.044930151570669846,
+      "clocks": {
+        "n_samples": 17,
+        "sm_mhz_min": 2587.0,
+        "sm_mhz_max": 2707.0,
+        "sm_mhz_mean": 2650.3529411764707,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 11001.0,
+        "mem_mhz_mean": 9471.588235294117,
+        "temp_c_min": 83.0,
+        "temp_c_max": 88.0,
+        "temp_c_mean": 85.6470588235294,
+        "power_w_min": 114.76,
+        "power_w_max": 116.9,
+        "power_w_mean": 115.77588235294118,
+        "util_pct_min": 100.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 100.0,
+        "boosted": true,
+        "thermal_ok": false,
+        "enough_samples": true,
+        "stable": false,
+        "ramp_seconds": 1.7275786399841309,
+        "cooldown_seconds": 1.0008594989776611
+      },
+      "quotable": false,
+      "reasons": [
+        "temperature limit"
+      ]
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 65536,
+      "n_steps": 120,
+      "path_steps_per_s": 20129412619.626015,
+      "n_reps": 3585,
+      "median_ms": 0.3906880021095276,
+      "ci95_ms": [
+        0.3903999924659729,
+        0.39107200503349304
+      ],
+      "iqr_frac": 0.0313702913821425,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2662.0,
+        "sm_mhz_max": 2692.0,
+        "sm_mhz_mean": 2673.4285714285716,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 11001.0,
+        "mem_mhz_mean": 9572.42857142857,
+        "temp_c_min": 80.0,
+        "temp_c_max": 82.0,
+        "temp_c_mean": 80.57142857142857,
+        "power_w_min": 95.79,
+        "power_w_max": 103.59,
+        "power_w_mean": 99.56142857142858,
+        "util_pct_min": 86.0,
+        "util_pct_max": 90.0,
+        "util_pct_mean": 87.5,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.5974066257476807,
+        "cooldown_seconds": 1.002875804901123
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 262144,
+      "n_steps": 120,
+      "path_steps_per_s": 22695664885.404358,
+      "n_reps": 1056,
+      "median_ms": 1.3860479593276978,
+      "ci95_ms": [
+        1.385599970817566,
+        1.3864959478378296
+      ],
+      "iqr_frac": 0.006187401699817486,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2692.0,
+        "sm_mhz_max": 2707.0,
+        "sm_mhz_mean": 2698.6666666666665,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 84.0,
+        "temp_c_max": 84.0,
+        "temp_c_mean": 84.0,
+        "power_w_min": 111.21,
+        "power_w_max": 114.24,
+        "power_w_mean": 113.078,
+        "util_pct_min": 95.0,
+        "util_pct_max": 97.0,
+        "util_pct_mean": 95.53333333333333,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.9066927433013916,
+        "cooldown_seconds": 0.5007092952728271
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 1048576,
+      "n_steps": 120,
+      "path_steps_per_s": 23277617690.1884,
+      "n_reps": 274,
+      "median_ms": 5.405584096908569,
+      "ci95_ms": [
+        5.378783941268921,
+        5.420719861984253
+      ],
+      "iqr_frac": 0.028438763457120146,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2542.0,
+        "sm_mhz_max": 2700.0,
+        "sm_mhz_mean": 2630.714285714286,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 84.0,
+        "temp_c_max": 86.0,
+        "temp_c_mean": 84.85714285714286,
+        "power_w_min": 113.99,
+        "power_w_max": 116.69,
+        "power_w_mean": 115.10357142857143,
+        "util_pct_min": 97.0,
+        "util_pct_max": 99.0,
+        "util_pct_mean": 98.14285714285714,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.9534056186676025,
+        "cooldown_seconds": 0.5018734931945801
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 4194304,
+      "n_steps": 120,
+      "path_steps_per_s": 23801628733.44663,
+      "n_reps": 70,
+      "median_ms": 21.1463041305542,
+      "ci95_ms": [
+        21.106367111206055,
+        21.446847915649414
+      ],
+      "iqr_frac": 0.03095881494975062,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2557.0,
+        "sm_mhz_max": 2707.0,
+        "sm_mhz_mean": 2646.6666666666665,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 86.0,
+        "temp_c_max": 86.0,
+        "temp_c_mean": 86.0,
+        "power_w_min": 114.47,
+        "power_w_max": 116.16,
+        "power_w_mean": 115.29866666666666,
+        "util_pct_min": 99.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 99.26666666666667,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.912402868270874,
+        "cooldown_seconds": 0.5040044784545898
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "base 10y (120 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 16777216,
+      "n_steps": 120,
+      "path_steps_per_s": 23770823745.299232,
+      "n_reps": 20,
+      "median_ms": 84.69483184814453,
+      "ci95_ms": [
+        83.76326370239258,
+        86.39684677124023
+      ],
+      "iqr_frac": 0.037414982685081984,
+      "clocks": {
+        "n_samples": 16,
+        "sm_mhz_min": 2542.0,
+        "sm_mhz_max": 2715.0,
+        "sm_mhz_mean": 2628.125,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 85.0,
+        "temp_c_max": 88.0,
+        "temp_c_mean": 86.375,
+        "power_w_min": 115.16,
+        "power_w_max": 116.38,
+        "power_w_mean": 115.76062499999999,
+        "util_pct_min": 99.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 99.8125,
+        "boosted": true,
+        "thermal_ok": false,
+        "enough_samples": true,
+        "stable": false,
+        "ramp_seconds": 1.859363079071045,
+        "cooldown_seconds": 0.5013003349304199
+      },
+      "quotable": false,
+      "reasons": [
+        "temperature limit"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "torch_philox_fp32",
+      "n_paths": 65536,
+      "n_steps": 240,
+      "path_steps_per_s": 8482511.500852438,
+      "n_reps": 5,
+      "median_ms": 1854.2432861328125,
+      "ci95_ms": [
+        1837.51220703125,
+        1917.5748291015625
+      ],
+      "iqr_frac": 0.018234543195996357,
+      "clocks": {
+        "n_samples": 89,
+        "sm_mhz_min": 1485.0,
+        "sm_mhz_max": 2797.0,
+        "sm_mhz_mean": 1659.9325842696628,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 9338.078651685393,
+        "temp_c_min": 54.0,
+        "temp_c_max": 61.0,
+        "temp_c_mean": 56.359550561797754,
+        "power_w_min": 15.13,
+        "power_w_max": 34.83,
+        "power_w_mean": 17.4976404494382,
+        "util_pct_min": 18.0,
+        "util_pct_max": 34.0,
+        "util_pct_mean": 30.910112359550563,
+        "boosted": false,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": false,
+        "ramp_seconds": 4.081001281738281,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": false,
+      "reasons": [
+        "SM clock below 70% of max in window"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "torch_philox_fp32",
+      "n_paths": 262144,
+      "n_steps": 240,
+      "path_steps_per_s": 31248699.129304208,
+      "n_reps": 5,
+      "median_ms": 2013.3497314453125,
+      "ci95_ms": [
+        1973.153564453125,
+        2035.7001953125
+      ],
+      "iqr_frac": 0.015586513870641647,
+      "clocks": {
+        "n_samples": 96,
+        "sm_mhz_min": 2790.0,
+        "sm_mhz_max": 2790.0,
+        "sm_mhz_mean": 2790.0,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 58.0,
+        "temp_c_max": 58.0,
+        "temp_c_mean": 58.0,
+        "power_w_min": 44.32,
+        "power_w_max": 47.43,
+        "power_w_mean": 46.5915625,
+        "util_pct_min": 25.0,
+        "util_pct_max": 30.0,
+        "util_pct_mean": 28.510416666666668,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 4.067287445068359,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 65536,
+      "n_steps": 240,
+      "path_steps_per_s": 102233493.63954157,
+      "n_reps": 10,
+      "median_ms": 153.85016632080078,
+      "ci95_ms": [
+        151.80511474609375,
+        162.62964630126953
+      ],
+      "iqr_frac": 0.026768012951261338,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2797.0,
+        "sm_mhz_max": 2797.0,
+        "sm_mhz_mean": 2797.0,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 56.0,
+        "temp_c_max": 56.0,
+        "temp_c_mean": 56.0,
+        "power_w_min": 32.21,
+        "power_w_max": 33.35,
+        "power_w_mean": 32.94733333333333,
+        "util_pct_min": 16.0,
+        "util_pct_max": 17.0,
+        "util_pct_mean": 16.533333333333335,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.1880450248718262,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 262144,
+      "n_steps": 240,
+      "path_steps_per_s": 421631652.28622025,
+      "n_reps": 10,
+      "median_ms": 149.21688079833984,
+      "ci95_ms": [
+        147.501220703125,
+        152.9127655029297
+      ],
+      "iqr_frac": 0.030418513402721267,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2790.0,
+        "sm_mhz_max": 2790.0,
+        "sm_mhz_mean": 2790.0,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 57.0,
+        "temp_c_max": 58.0,
+        "temp_c_mean": 57.857142857142854,
+        "power_w_min": 44.72,
+        "power_w_max": 45.51,
+        "power_w_mean": 44.89857142857142,
+        "util_pct_min": 22.0,
+        "util_pct_max": 23.0,
+        "util_pct_mean": 22.214285714285715,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.2070341110229492,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 1048576,
+      "n_steps": 240,
+      "path_steps_per_s": 1719321362.5116742,
+      "n_reps": 11,
+      "median_ms": 146.3706817626953,
+      "ci95_ms": [
+        145.0130615234375,
+        147.64505004882812
+      ],
+      "iqr_frac": 0.014339462847674794,
+      "clocks": {
+        "n_samples": 16,
+        "sm_mhz_min": 2715.0,
+        "sm_mhz_max": 2722.0,
+        "sm_mhz_mean": 2719.8125,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 62.0,
+        "temp_c_max": 63.0,
+        "temp_c_mean": 62.875,
+        "power_w_min": 82.36,
+        "power_w_max": 83.69,
+        "power_w_mean": 83.063125,
+        "util_pct_min": 64.0,
+        "util_pct_max": 66.0,
+        "util_pct_mean": 65.1875,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.1721620559692383,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "torch_randn_fp32",
+      "n_paths": 4194304,
+      "n_steps": 240,
+      "path_steps_per_s": 1121747733.9738343,
+      "n_reps": 5,
+      "median_ms": 897.3790893554688,
+      "ci95_ms": [
+        896.6063232421875,
+        897.6493530273438
+      ],
+      "iqr_frac": 0.0009702326633570159,
+      "clocks": {
+        "n_samples": 42,
+        "sm_mhz_min": 2790.0,
+        "sm_mhz_max": 2797.0,
+        "sm_mhz_mean": 2794.1666666666665,
+        "mem_mhz_min": 12001.0,
+        "mem_mhz_max": 12001.0,
+        "mem_mhz_mean": 12001.0,
+        "temp_c_min": 65.0,
+        "temp_c_max": 66.0,
+        "temp_c_mean": 65.64285714285714,
+        "power_w_min": 90.85,
+        "power_w_max": 91.79,
+        "power_w_mean": 91.39738095238096,
+        "util_pct_min": 98.0,
+        "util_pct_max": 99.0,
+        "util_pct_mean": 98.66666666666667,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 2.690546751022339,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 65536,
+      "n_steps": 240,
+      "path_steps_per_s": 19885506620.9333,
+      "n_reps": 1806,
+      "median_ms": 0.7909599840641022,
+      "ci95_ms": [
+        0.7904959917068481,
+        0.7914239764213562
+      ],
+      "iqr_frac": 0.022028949051765334,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2677.0,
+        "sm_mhz_max": 2685.0,
+        "sm_mhz_mean": 2679.8571428571427,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 11001.0,
+        "mem_mhz_mean": 9715.285714285714,
+        "temp_c_min": 78.0,
+        "temp_c_max": 78.0,
+        "temp_c_mean": 78.0,
+        "power_w_min": 98.76,
+        "power_w_max": 101.76,
+        "power_w_mean": 100.62785714285714,
+        "util_pct_min": 90.0,
+        "util_pct_max": 93.0,
+        "util_pct_mean": 91.42857142857143,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.0784499645233154,
+        "cooldown_seconds": 0.0
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 262144,
+      "n_steps": 240,
+      "path_steps_per_s": 21403238050.36959,
+      "n_reps": 500,
+      "median_ms": 2.939487934112549,
+      "ci95_ms": [
+        2.935839891433716,
+        2.943120402097702
+      ],
+      "iqr_frac": 0.016024560093813776,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2707.0,
+        "sm_mhz_max": 2722.0,
+        "sm_mhz_mean": 2716.1428571428573,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 82.0,
+        "temp_c_max": 83.0,
+        "temp_c_mean": 82.71428571428571,
+        "power_w_min": 114.55,
+        "power_w_max": 114.92,
+        "power_w_mean": 114.73571428571428,
+        "util_pct_min": 96.0,
+        "util_pct_max": 97.0,
+        "util_pct_mean": 96.64285714285714,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 2.007485866546631,
+        "cooldown_seconds": 1.0036022663116455
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 1048576,
+      "n_steps": 240,
+      "path_steps_per_s": 22027458041.799892,
+      "n_reps": 130,
+      "median_ms": 11.42475175857544,
+      "ci95_ms": [
+        11.411049139499664,
+        11.461759567260742
+      ],
+      "iqr_frac": 0.019016929485124467,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2617.0,
+        "sm_mhz_max": 2722.0,
+        "sm_mhz_mean": 2676.1428571428573,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 83.0,
+        "temp_c_max": 85.0,
+        "temp_c_mean": 83.5,
+        "power_w_min": 114.16,
+        "power_w_max": 116.07,
+        "power_w_mean": 114.97500000000001,
+        "util_pct_min": 98.0,
+        "util_pct_max": 99.0,
+        "util_pct_mean": 98.64285714285714,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 2.03853178024292,
+        "cooldown_seconds": 0.5006587505340576
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 4194304,
+      "n_steps": 240,
+      "path_steps_per_s": 21937226731.43018,
+      "n_reps": 33,
+      "median_ms": 45.8869743347168,
+      "ci95_ms": [
+        45.274017333984375,
+        46.70854568481445
+      ],
+      "iqr_frac": 0.039806317984170746,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2557.0,
+        "sm_mhz_max": 2715.0,
+        "sm_mhz_mean": 2660.214285714286,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 84.0,
+        "temp_c_max": 87.0,
+        "temp_c_mean": 85.64285714285714,
+        "power_w_min": 115.76,
+        "power_w_max": 116.56,
+        "power_w_mean": 116.14357142857143,
+        "util_pct_min": 99.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 99.92857142857143,
+        "boosted": true,
+        "thermal_ok": false,
+        "enough_samples": true,
+        "stable": false,
+        "ramp_seconds": 1.8188750743865967,
+        "cooldown_seconds": 0.5052368640899658
+      },
+      "quotable": false,
+      "reasons": [
+        "temperature limit"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32",
+      "n_paths": 16777216,
+      "n_steps": 240,
+      "path_steps_per_s": 22095713810.63299,
+      "n_reps": 9,
+      "median_ms": 182.23135375976562,
+      "ci95_ms": [
+        179.38975524902344,
+        189.7196502685547
+      ],
+      "iqr_frac": 0.03927926265336338,
+      "clocks": {
+        "n_samples": 16,
+        "sm_mhz_min": 2647.0,
+        "sm_mhz_max": 2700.0,
+        "sm_mhz_mean": 2674.9375,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 11001.0,
+        "mem_mhz_mean": 9251.0,
+        "temp_c_min": 81.0,
+        "temp_c_max": 87.0,
+        "temp_c_mean": 83.75,
+        "power_w_min": 112.34,
+        "power_w_max": 116.82,
+        "power_w_mean": 114.064375,
+        "util_pct_min": 100.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 100.0,
+        "boosted": true,
+        "thermal_ok": false,
+        "enough_samples": true,
+        "stable": false,
+        "ramp_seconds": 1.8147318363189697,
+        "cooldown_seconds": 1.0010032653808594
+      },
+      "quotable": false,
+      "reasons": [
+        "temperature limit"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 65536,
+      "n_steps": 240,
+      "path_steps_per_s": 20886858991.030846,
+      "n_reps": 1868,
+      "median_ms": 0.7530399858951569,
+      "ci95_ms": [
+        0.7513920068740845,
+        0.7551203802227974
+      ],
+      "iqr_frac": 0.050196576049331344,
+      "clocks": {
+        "n_samples": 15,
+        "sm_mhz_min": 2670.0,
+        "sm_mhz_max": 2670.0,
+        "sm_mhz_mean": 2670.0,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 11001.0,
+        "mem_mhz_mean": 9534.333333333334,
+        "temp_c_min": 79.0,
+        "temp_c_max": 80.0,
+        "temp_c_mean": 79.6,
+        "power_w_min": 91.64,
+        "power_w_max": 98.7,
+        "power_w_mean": 95.45800000000001,
+        "util_pct_min": 84.0,
+        "util_pct_max": 92.0,
+        "util_pct_mean": 88.2,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.6057183742523193,
+        "cooldown_seconds": 1.000678300857544
+      },
+      "quotable": false,
+      "reasons": [
+        "IQR 5.0% > 5% of median"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 262144,
+      "n_steps": 240,
+      "path_steps_per_s": 22862458198.241096,
+      "n_reps": 531,
+      "median_ms": 2.7518720626831055,
+      "ci95_ms": [
+        2.7499520778656006,
+        2.7537600994110107
+      ],
+      "iqr_frac": 0.01177380753111975,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2700.0,
+        "sm_mhz_max": 2715.0,
+        "sm_mhz_mean": 2707.3571428571427,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 84.0,
+        "temp_c_max": 85.0,
+        "temp_c_mean": 84.28571428571429,
+        "power_w_min": 114.6,
+        "power_w_max": 114.82,
+        "power_w_mean": 114.72357142857142,
+        "util_pct_min": 95.0,
+        "util_pct_max": 97.0,
+        "util_pct_mean": 95.57142857142857,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 1.9186780452728271,
+        "cooldown_seconds": 0.5017781257629395
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 1048576,
+      "n_steps": 240,
+      "path_steps_per_s": 23637161641.724506,
+      "n_reps": 139,
+      "median_ms": 10.646719932556152,
+      "ci95_ms": [
+        10.613887786865234,
+        10.677903628349304
+      ],
+      "iqr_frac": 0.024650625968803897,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2602.0,
+        "sm_mhz_max": 2715.0,
+        "sm_mhz_mean": 2668.214285714286,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 84.0,
+        "temp_c_max": 86.0,
+        "temp_c_mean": 84.5,
+        "power_w_min": 114.15,
+        "power_w_max": 115.85,
+        "power_w_mean": 114.825,
+        "util_pct_min": 97.0,
+        "util_pct_max": 99.0,
+        "util_pct_mean": 97.85714285714286,
+        "boosted": true,
+        "thermal_ok": true,
+        "enough_samples": true,
+        "stable": true,
+        "ramp_seconds": 2.017871141433716,
+        "cooldown_seconds": 0.501936674118042
+      },
+      "quotable": true,
+      "reasons": []
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 4194304,
+      "n_steps": 240,
+      "path_steps_per_s": 23779857036.362576,
+      "n_reps": 35,
+      "median_ms": 42.331329345703125,
+      "ci95_ms": [
+        41.97148895263672,
+        43.0164794921875
+      ],
+      "iqr_frac": 0.03613471829620225,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2550.0,
+        "sm_mhz_max": 2715.0,
+        "sm_mhz_mean": 2636.785714285714,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 85.0,
+        "temp_c_max": 87.0,
+        "temp_c_mean": 86.0,
+        "power_w_min": 115.72,
+        "power_w_max": 116.56,
+        "power_w_mean": 116.02428571428571,
+        "util_pct_min": 99.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 99.21428571428571,
+        "boosted": true,
+        "thermal_ok": false,
+        "enough_samples": true,
+        "stable": false,
+        "ramp_seconds": 1.9401772022247314,
+        "cooldown_seconds": 0.5024511814117432
+      },
+      "quotable": false,
+      "reasons": [
+        "temperature limit"
+      ]
+    },
+    {
+      "scenario": "real-world 20y (240 steps)",
+      "engine": "triton_fused_fp32_fastmath",
+      "n_paths": 16777216,
+      "n_steps": 240,
+      "path_steps_per_s": 23986498935.0118,
+      "n_reps": 9,
+      "median_ms": 167.86659240722656,
+      "ci95_ms": [
+        166.14524841308594,
+        174.63031005859375
+      ],
+      "iqr_frac": 0.02291209997359404,
+      "clocks": {
+        "n_samples": 14,
+        "sm_mhz_min": 2610.0,
+        "sm_mhz_max": 2722.0,
+        "sm_mhz_mean": 2654.9285714285716,
+        "mem_mhz_min": 9001.0,
+        "mem_mhz_max": 9001.0,
+        "mem_mhz_mean": 9001.0,
+        "temp_c_min": 82.0,
+        "temp_c_max": 87.0,
+        "temp_c_mean": 85.14285714285714,
+        "power_w_min": 112.76,
+        "power_w_max": 116.69,
+        "power_w_mean": 115.37571428571428,
+        "util_pct_min": 100.0,
+        "util_pct_max": 100.0,
+        "util_pct_mean": 100.0,
+        "boosted": true,
+        "thermal_ok": false,
+        "enough_samples": true,
+        "stable": false,
+        "ramp_seconds": 2.2008674144744873,
+        "cooldown_seconds": 1.0023651123046875
+      },
+      "quotable": false,
+      "reasons": [
+        "temperature limit"
+      ]
+    }
+  ]
+}
