@@ -135,7 +135,7 @@ def _bench_plot(b: dict) -> bytes | None:
     return buf.getvalue()
 
 
-def section_bench() -> str:
+def section_bench(out_dir: Path | None = None) -> str:
     b = _load("bench/bench.json")
     if b is None:
         return _missing("Benchmark", "segfund bench")
@@ -163,6 +163,9 @@ def section_bench() -> str:
     png = _bench_plot(b)
     if png:
         out.append(_img(png=png, alt="benchmark throughput"))
+        if out_dir is not None:  # also as a file, for the README
+            out_dir.mkdir(parents=True, exist_ok=True)
+            (out_dir / "bench.png").write_bytes(png)
     out.append("<p class='muted'>vs NumPy = throughput ratio against the best NumPy row of the same scenario "
                "(NumPy is only run at small sizes; it is single-threaded and its rows are not clock-gated).</p>")
     out.append(_src("bench/bench.txt"))
@@ -207,7 +210,7 @@ def build(out: Path | None = None) -> Path:
         ("Value of the guarantee", section_price()),
         ("Tail risk (real-world)", section_tail()),
         ("Convergence", section_convergence()),
-        ("Speed: NumPy vs PyTorch vs fused Triton", section_bench()),
+        ("Speed: NumPy vs PyTorch vs fused Triton", section_bench(out.parent)),
         ("Validation", section_validation()),
         ("Nested simulation vs LSMC", section_nested()),
     ]
