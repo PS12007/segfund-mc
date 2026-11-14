@@ -253,6 +253,11 @@ paths, base contract) was about 43 s for NumPy, 2.7 s for unfused PyTorch and
 includes copying results to the host, with no warmup discipline and no clock
 check. Phase 6 does the timing properly, and it may change these ratios.
 
+*Update (phase 6, §6.2):* with clock-gated device timing, fused Triton is 12.6×
+faster than unfused PyTorch with its native generator at 1M paths and 19.7× at
+4M. Unfused PyTorch with the emulated Philox is another 13× slower than that
+(1,023 vs 77 ms at 262k paths).
+
 ### 2.2 Random-number design
 
 - **Counter-based Philox4x32-10.** Each random block is a pure function of
@@ -356,6 +361,8 @@ The risk is summing 10^6 to 10^8 path values into one mean.
 - **Output layout** is struct-of-arrays (all pv_mat values, then all pv_death...),
   so the GPU writes contiguous memory.
 - **BLOCK = 256 and num_warps = 4 are not tuned yet.** That's phase 6.
+  *Update (phase 6, §6.4):* swept; the default is within 4% of the fastest
+  shape and stays.
 
 ### 2.6 Interview questions (with model answers)
 
@@ -565,6 +572,9 @@ being 1e-2 SE biased (phase 2).
    number from this phase is quotable. Phase 6 needs the laptop in its
    performance power mode (the vendor's control app, or Windows "Best
    performance") and a re-check of the cap reason.
+   *Update (phase 6, §6.3):* performance mode raised the limit to 115 W, but
+   the GPU still spends its first ~20 s of load at ~1,500 MHz. The 5 s ramp was
+   too short even with the cap lifted.
 3. **The plot label rendered as maths**: matplotlib read `$` as mathtext. Fixed
    by escaping it and redrawing from the saved JSON, so no numbers changed.
 4. **A PowerShell string corrupted the docs.** In PowerShell double-quoted
@@ -578,7 +588,8 @@ being 1e-2 SE biased (phase 2).
 - **Antithetic by counter remapping, not two paths per thread.** Every engine
   stays identical and equality-testable, but each pair computes its Philox block
   twice. Doing both mirror paths in one thread would halve the RNG cost and
-  double the registers. That's a phase 6 option.
+  double the registers. That's a phase 6 option. (Not done in phase 6: the
+  antithetic path is a counter remap only, and the bench times plain runs.)
 - **Other controls we could add:** the GMDB puts at each death date (a strip of
   puts with known prices), or the discounted fund itself (a martingale with mean
   e^(-MER T)). Several controls means a multiple regression for beta. One good
@@ -1008,8 +1019,9 @@ here takes under a second.
   1e-11 (`tests/test_nested.py`).
 - **GPU vs CPU** on identical streams: outer states agree to 5e-7, and inner
   values to 3.4e-5 of their SE (check V8e, 256 x 512, run during development;
-  `tests/test_gpu_equality.py` runs it too). `results/validation/phase2_gpu.txt`
-  has not been regenerated since V8e was added; that's a to-do for phase 6.
+  `tests/test_gpu_equality.py` runs it too). *Update (phase 6):*
+  `results/validation/phase2_gpu.txt` was regenerated with V8e included: 69/69
+  gated checks pass, with the same 3.4e-5 SE inner-value difference.
 
 ### 5.5 What went wrong
 
@@ -1082,3 +1094,184 @@ here takes under a second.
    out a borderline +2.47). An exactness test: stop at t0 and restart from the
    saved state with the same random stream, and you reproduce the uninterrupted
    path to 1e-11. Plus GPU = CPU on identical streams.
+
+## Phase 6: benchmarks and the report
+
+### 6.1 What is being compared, and why these four engines
+
+`segfund bench` times the same contract simulation four ways:
+
+| Engine | What it is | Random numbers |
+|---|---|---|
+| NumPy fp64 | the reference, one CPU thread | Philox, bit-exact |
+| PyTorch unfused, emulated Philox | same algorithm as GPU tensor ops | Philox, bit-exact |
+| PyTorch unfused, `torch.randn` | the same, with PyTorch's own generator | different numbers |
+| Triton fused | the whole contract in one kernel launch | Philox, bit-exact |
+
+The emulated-Philox PyTorch engine exists for the phase 2 equality checks. As a
+speed baseline it is unfair: PyTorch has no uint32 multiply-high, so each
+Philox round is a dozen int64 tensor operations on 16-bit limbs, hundreds of
+kernel launches per step just for random numbers. Comparing Triton only with
+that would inflate the speedup. The `torch.randn` engine is what a reasonable
+person would write in plain PyTorch, so **it is the baseline the headline
+speedup is quoted against.** Because it uses different random numbers it can't
+be checked path by path; the gate is that its mean PV lies within 4 combined
+standard errors of the reference (it came out at z = +1.05 and +1.09).
+
+Rules carried over from tritonkv and phase 2:
+- **Equality before timing.** Every engine is run on the reference's paths and
+  must pass the phase 2 tolerances first. An engine that fails is not timed.
+- **Device time only.** CUDA events around the launch. The Triton output buffer
+  is allocated once outside the timed region, and no row includes copying
+  results to the host.
+- **Clock gate.** A row is quotable only if every SM-clock sample in its window
+  is at least 70% of max (2,163 MHz), the GPU stays below 87 °C, there are at
+  least 4 clock samples, and the IQR is at most 5% of the median. Rows that
+  fail are still printed, with the reason.
+- **Throughput in path-steps per second** (paths × monthly steps), so a
+  10-year and a 20-year contract, or 16k and 16M paths, sit on one axis.
+
+### 6.2 Results
+
+Raw: `results/bench/bench.txt`. RTX 5060 Laptop GPU, performance mode, on AC.
+Base 10-year contract:
+
+| Paths | Triton fused | PyTorch + torch.randn | Speedup |
+|---|---|---|---|
+| 65,536 | 0.419 ms | 78.8 ms (IQR 5.2%, not quotable) | ~190× |
+| 1,048,576 | 5.77 ms | 72.7 ms | 12.6× |
+| 4,194,304 | 22.8 ms | 450 ms | 19.7× |
+
+Three regimes show up:
+
+1. **Unfused PyTorch is launch-bound below about a million paths.** Its time is
+   flat at 73-79 ms from 65k to 1M paths: about 0.6 ms per step, whatever the
+   size. That is the cost of launching dozens of small kernels per step from
+   Python, so the GPU sits mostly idle. Only at 4M paths does the time grow
+   (450 ms), when each of those kernels has enough data that DRAM traffic
+   dominates.
+2. **The fused kernel is compute-bound.** It levels off at about 2.2e10
+   path-steps/s from 1M paths up, in both scenarios. It writes 28 bytes per
+   path in total: at 16M paths that is 470 MB in 91 ms, about 5 GB/s, around
+   1% of the card's memory bandwidth. What limits it is arithmetic: per step,
+   one Philox block, two logs, a sine and cosine, square roots, three exps and
+   a pow, in libdevice's accurate versions.
+3. **FAST_MATH buys about 6-7%** (5.41 vs 5.77 ms at 1M paths). It is not used,
+   because phase 2 showed its `exp` is biased enough to move a 20-year fee PV
+   by 1% of a standard error. Six percent is not worth a known bias.
+
+**Against NumPy** the fused kernel's throughput is about 3,600× higher (5.4e6
+vs 2.2e10 path-steps/s). Read that carefully: NumPy here runs on one core of a
+20-core i7-14700HX, and the CPU rows are not clock-gated. A multithreaded
+compiled CPU engine (Numba or C++ with OpenMP) would plausibly be tens of
+times faster than this NumPy code, so a fair CPU-vs-GPU number would be far
+smaller. The 3,600× measures "rewrite your NumPy prototype as a fused kernel",
+not "GPU vs CPU". I have not built that CPU engine, so I don't quote a number.
+
+**What could not be made quotable:** the 16M-path Triton rows and the 4M-path
+20-year rows. Sustained at 117 W, the GPU reaches 87-88 °C within a few
+seconds, which fails the temperature rule. The clock stayed above 2,540 MHz and
+the throughput matches the quotable rows, so those numbers are very likely
+right, but the gate was written before the run and it stays as it is.
+
+### 6.3 What went wrong
+
+1. **A 20-second low-power state.** In phase 3 the GPU sat at 1,515 MHz and
+   nothing was quotable; the explanation then was a power cap. With the laptop
+   in performance mode the power limit is now 115 W, but a probe that ran the
+   kernel continuously showed the GPU *still* holding about 1,500 MHz and 34 W
+   for the first ~20 s of load, then jumping to ~2,700 MHz and 115 W. The
+   driver reports no throttle reason for it; only the clock shows it. The
+   phase 3 ramp gave up after 5 s, so it timed the GPU in that state. The ramp
+   now waits up to 45 s for the clock to hold above 80% of max for a full
+   second.
+2. **My fix had its own bug.** The new ramp kept the GPU busy with "launch for
+   50 ms, then check the clock". Kernel launches are asynchronous, so in 50 ms
+   Python queued about a thousand launches, and the sync after them waited for
+   all of them. Ramps took up to 190 s, heated the GPU to 87 °C, and most
+   Triton rows then failed the temperature gate (run kept in
+   `results/bench/bench_run1_ramp_queued_launches.txt`). Syncing after every
+   call fixed it: ramps take about 2 s and the whole benchmark went from 17
+   minutes to 3. Same lesson as phase 5's compile-time mistake: when a
+   measurement looks odd, look at what the harness is doing, not just the
+   thing being measured.
+3. **A fast row looked slower than a slow one.** In the first smoke test the
+   FAST_MATH kernel was slower than the accurate one. That's impossible for
+   the same work, and it was the low-power state again: one row ran after the
+   switch to full power, the other during a drop back. A result that
+   contradicts something you know is a measurement bug until shown otherwise.
+
+### 6.4 Design decisions and alternatives
+
+- **Equality and CPU rows first, then all GPU rows back to back.** The GPU is
+  idle during NumPy runs; doing those between GPU rows let it drop back into
+  the low-power state.
+- **A cool-down to 70 °C before each GPU row**, so one row's heat doesn't count
+  against the next.
+- **The launch shape was swept, not tuned** (`scripts/block_sweep.py`,
+  `results/bench/block_sweep.txt`; 1M paths, all 17 shapes, 16 quotable).
+  - The fastest shape, BLOCK = 128 with one warp, is 4% faster than the default
+    (256 paths, 4 warps), and several shapes tie within 4%.
+  - The slow ones give each thread 8 or more paths (up to 3.6× slower): too
+    many registers per thread, so fewer warps fit on each SM to hide latency.
+  - A 4% gain that might not hold on another GPU isn't worth a change, so the
+    default stays.
+- **Launch shape changes the output bits.** Two shapes produce bitwise-identical
+  output only when each thread handles the same number of paths (here, 2).
+  Otherwise the compiler emits different instructions (vector width, FMA
+  contraction), and results differ at fp32 rounding level: at most 1.5e-6
+  relative on fund values (0.53 on a $415k fund) and at most $0.04 on any
+  path's claim PV. Against the fp64 reference every shape
+  had the same error to two significant figures (fund 3.2e-6 relative, mean PV
+  difference −2.03e-3). So "bitwise reproducible" holds for a fixed kernel
+  configuration, not across configurations, and the equality suite tests the
+  configuration that is actually used.
+- **Not tried:** `torch.compile` on the unfused engine. It would fuse many of
+  the element-wise operations, and is the obvious next baseline. CUDA graphs
+  would remove most of the launch overhead from the unfused engine at small
+  sizes. Both would narrow the gap below 1M paths; neither changes the
+  compute-bound limit of the fused kernel.
+- **The report reads saved results only.** `segfund report` re-simulates
+  nothing; every number on the page comes from a JSON file under `results/`,
+  linked by path, and a missing file shows as "not run yet".
+
+### 6.5 Interview questions (with model answers)
+
+1. **Your kernel is 3,600× faster than NumPy. Is that the speedup of GPU over CPU?**
+   No. That compares a fused GPU kernel with single-threaded NumPy that makes
+   a full pass over memory for every operation. A multithreaded compiled CPU
+   engine on my 20-core CPU would be much faster than my NumPy, so the honest
+   GPU-vs-CPU figure is far smaller, and I haven't measured it. The number I
+   quote is against plain PyTorch on the same GPU with its native generator:
+   12.6× at 1M paths and 19.7× at 4M.
+
+2. **Why is unfused PyTorch's time flat from 65k to 1M paths?**
+   It is bound by kernel launches, not by the GPU. Each step is dozens of tiny
+   kernels launched from Python, each costing several microseconds of CPU-side
+   overhead, and at small sizes each kernel finishes before the next is
+   launched. Time is then proportional to steps × kernels, not to paths. Only
+   when each kernel has millions of elements does the GPU's own work dominate.
+
+3. **Is the fused kernel memory-bound or compute-bound, and how do you know?**
+   Compute-bound. Throughput stops growing at about 1M paths and stays at 2.2e10
+   path-steps/s up to 16M, and the kernel moves only 28 bytes per path: about
+   5 GB/s at 16M paths, around 1% of memory bandwidth. The work is
+   transcendental math: logs, sin/cos and exps every step. Supporting evidence:
+   swapping in hardware-approximate math (FAST_MATH) alone made it 6-7% faster.
+
+4. **How do you benchmark on a laptop GPU without fooling yourself?**
+   Sample the clock in the background during every timing window and refuse
+   to quote rows where it was low, where the GPU was hot, or where timings
+   were noisy. Warm the GPU up with the real workload until the clock holds.
+   Time with CUDA events, not Python timers. Check correctness before timing,
+   and keep failed runs. My first run on this machine was invalid for two
+   reasons, a 20-second low-power state and a bug in my own warm-up loop, and
+   both were visible only in the clock and temperature logs.
+
+5. **When would you not bother writing a fused kernel?**
+   When the simulation is not the bottleneck: a few hundred thousand paths
+   run in a fraction of a second even in plain PyTorch. Or when the model
+   changes often, because every change has to be made twice and re-validated
+   (the fused kernel has its own equality suite for exactly that reason). Try
+   `torch.compile` or CUDA graphs first. Fusion pays off for repeated large
+   runs: nested simulation, sensitivities, convergence studies.
