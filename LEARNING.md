@@ -1133,7 +1133,9 @@ Rules carried over from tritonkv and phase 2:
 
 ### 6.2 Results
 
-Raw: `results/bench/bench.txt`. RTX 5060 Laptop GPU, performance mode, on AC.
+Raw: `results/bench/bench_run2.txt` (run 2; the current `bench.txt` is run 4,
+which adds `torch.compile` and agrees with these GPU-bound numbers within 5%,
+§6.6). RTX 5060 Laptop GPU, performance mode, on AC.
 Base 10-year contract:
 
 | Paths | Triton fused | PyTorch + torch.randn | Speedup |
@@ -1226,11 +1228,8 @@ right, but the gate was written before the run and it stays as it is.
   difference −2.03e-3). So "bitwise reproducible" holds for a fixed kernel
   configuration, not across configurations, and the equality suite tests the
   configuration that is actually used.
-- **Not tried:** `torch.compile` on the unfused engine. It would fuse many of
-  the element-wise operations, and is the obvious next baseline. CUDA graphs
-  would remove most of the launch overhead from the unfused engine at small
-  sizes. Both would narrow the gap below 1M paths; neither changes the
-  compute-bound limit of the fused kernel.
+- **`torch.compile` and CUDA graphs** were first listed here as "not tried".
+  They were added afterwards; see §6.6.
 - **The report reads saved results only.** `segfund report` re-simulates
   nothing; every number on the page comes from a JSON file under `results/`,
   linked by path, and a missing file shows as "not run yet".
@@ -1242,8 +1241,8 @@ right, but the gate was written before the run and it stays as it is.
    a full pass over memory for every operation. A multithreaded compiled CPU
    engine on my 20-core CPU would be much faster than my NumPy, so the honest
    GPU-vs-CPU figure is far smaller, and I haven't measured it. The number I
-   quote is against plain PyTorch on the same GPU with its native generator:
-   12.6× at 1M paths and 19.8× at 4M.
+   quote is against PyTorch on the same GPU with `torch.compile` and a CUDA
+   graph: 10.8× at 4M paths (§6.6). Against plain eager PyTorch it is 19.6×.
 
 2. **Why is unfused PyTorch's time flat from 65k to 1M paths?**
    It is bound by kernel launches, not by the GPU. Each step is dozens of tiny
@@ -1275,3 +1274,81 @@ right, but the gate was written before the run and it stays as it is.
    (the fused kernel has its own equality suite for exactly that reason). Try
    `torch.compile` or CUDA graphs first. Fusion pays off for repeated large
    runs: nested simulation, sensitivities, convergence studies.
+
+### 6.6 Does `torch.compile` close the gap?
+
+The obvious question about a hand-written fused kernel is whether the compiler
+would have done it for free. `gpu/torch_compiled.py` answers that with two
+more engines in `segfund bench`:
+
+- **`torch.compile` per step.** One month of the model is written as a
+  branch-free function (deposits added every step, mostly zero; resets as a
+  `torch.where`) that updates a packed `(9, n)` state in place. That function is
+  compiled once and called 120 times from Python. Compiling the unrolled 120-step
+  loop instead would bake 120 sets of constants into one enormous graph.
+- **`torch.compile` + a CUDA graph.** The same compiled step, captured once in a
+  `torch.cuda.CUDAGraph` over fixed buffers. Each month copies in the table row
+  and the normals and replays the graph, so the step costs one launch.
+
+Both draw the same `torch.randn` numbers as the eager engine, so they are checked
+against it path by path (1.5e-6 relative, inside the phase 2 budget of
+1e-6 × steps), as well as statistically against the NumPy reference.
+
+Results (run 4, `results/bench/bench.txt`, base contract, 120 steps, all rows
+quotable):
+
+| Paths | Fused Triton | compile + graph | compile | eager PyTorch |
+|---|---|---|---|---|
+| 4,194,304 | 23.8 ms | 257 ms | 256 ms | 467 ms |
+
+What this shows:
+
+1. **The compiler buys about 1.8× over eager PyTorch at large sizes, and stops
+   there.** The compiled step fuses a month's arithmetic into a few kernels.
+   But the state still goes through GPU memory every month: read 9 floats,
+   write 9, plus 3 normals written by `randn` and read back. That is about
+   96 bytes per path-step. At about 2e9 path-steps/s that is roughly 190 GB/s,
+   which is the memory system's limit, not the arithmetic's. The fused kernel
+   moves 28 bytes per path in total, because the state never leaves registers
+   and the random numbers are made where they're used. **That is the 10.8×.**
+   No per-step compiler can remove it; it would have to fuse across the time loop.
+2. **CUDA graphs fix the small-size problem, not the large-size one.** Below
+   about 1M paths both PyTorch versions are limited by launching kernels from
+   Python. The graph cut the compiled step from about 49 ms to 13 ms at 262k
+   paths (rows too noisy to be quotable: IQR 8–22%, from launch jitter). At 4M paths the two compiled versions are identical, because the GPU
+   is busy moving memory either way.
+3. **First-call cost is real.** The first compile on this machine took 54 s
+   (cold cache), later ones about 8–14 s per new tensor shape, and the CUDA
+   graph has to be captured once per path count. The fused Triton kernel
+   compiles in about a second.
+
+**Two Windows-specific traps** came up getting it to compile at all:
+- **A NumPy float became a CPU tensor.** One argument (`lapse_hazard`) was a
+  NumPy float64. Dynamo turned it into a CPU tensor, so Inductor generated a
+  C++ kernel for it and looked for MSVC (`cl.exe`), which isn't installed. The
+  fix: pass plain Python floats.
+- **CUDA-graph mode clashed with the time loop.** `mode="reduce-overhead"`
+  refuses to feed one replay's outputs into the next replay ("accessing tensor
+  output of CUDAGraphs that has been overwritten"). Hence the explicit
+  `torch.cuda.CUDAGraph` with in-place state.
+
+**Benchmark hygiene, again.** Run 3, the first with these engines, had most
+Triton rows fail the 87 °C rule. The cool-down before each GPU row only waited
+for 70 °C, and from there the fused kernel at 115 W crossed 87 °C inside its own
+timing window. Waiting for 60 °C instead (run 4) made every Triton row
+quotable, including 16M paths for the first time. The gate itself was not
+changed. Run 4 also showed the CPU-bound rows (NumPy, and PyTorch below 1M
+paths) running about 2× slower than in run 2. The CPU isn't clock-gated and
+shares its cooling with a 115 W GPU. So the headline compares engines only at
+4M paths, where every engine is GPU-bound and run 2 and run 4 agree within 5%.
+
+**Interview question: "Why not just use `torch.compile`?"**
+I did, and it is the baseline I quote against. It makes the PyTorch version
+1.8× faster, and with a CUDA graph it also fixes the launch overhead at small
+sizes. It still leaves a 10.8× gap at 4M paths. It fuses within a time step,
+but the simulation is a 120-step recurrence, so the state goes back to memory
+every month and the compiled version is memory-bound. The hand-written kernel
+fuses across time: it keeps each path's state in registers and generates its
+random numbers in place. If the model changed every week I'd keep the compiled
+version anyway, for the maintenance cost. For repeated large runs, the kernel
+is worth it.

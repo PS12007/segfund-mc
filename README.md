@@ -84,33 +84,52 @@ the NumPy fp64 reference on the same 65,536 paths. Times are CUDA-event medians
 of the launch only. A row is quotable only if the SM clock stayed at or above
 70% of max, the GPU stayed below 87 °C, and the IQR was at most 5% of the median.
 
-Base 10-year contract (120 monthly steps):
+Base 10-year contract (120 monthly steps), 4,194,304 paths. Every row passes
+the clock gate.
 
-| Paths | Fused Triton | Unfused PyTorch, `torch.randn` | Speedup |
-|---|---|---|---|
-| 1,048,576 | 5.77 ms | 72.7 ms | **12.6×** |
-| 4,194,304 | 22.8 ms | 450 ms | **19.8×** |
+| Engine | Time | Fused Triton is |
+|---|---|---|
+| **Fused Triton kernel** | **23.8 ms** | — |
+| PyTorch + `torch.compile` + CUDA graph | 257 ms | **10.8× faster** |
+| PyTorch + `torch.compile` | 256 ms | 10.8× faster |
+| Plain PyTorch (unfused, `torch.randn`) | 467 ms | 19.6× faster |
 
-- **The fused kernel is compute-bound.** It levels off at about 2.2e10
-  path-steps/s from 1M paths up. It writes only 28 bytes per path, which is about
-  1% of the memory bandwidth.
-- **Unfused PyTorch is launch-bound below about 1M paths.** It takes 73–79 ms
-  whether it runs 65k or 1M paths.
-- **Unfused PyTorch with the bit-exact emulated Philox is another 13× slower.**
-  It exists for the equality checks, not as a baseline.
+- **`torch.compile` is the fair baseline**, and it buys about 1.8× over plain
+  PyTorch at this size. It is still 10.8× slower than the fused kernel:
+  - It fuses each month's arithmetic, but it still reads and writes the
+    whole state and three fresh normals through GPU memory every month, about
+    96 bytes per path-step. At about 2e9 path-steps/s that is around 190 GB/s,
+    so the compiled engine is memory-bound.
+  - The fused kernel keeps the state in registers for all 120 months, generates
+    its random numbers in place, and writes 28 bytes per path once.
+  - The compiled engines use the same `torch.randn` numbers as plain PyTorch,
+    and match it path by path to 1.5e-6.
+- **The CUDA graph only matters below about 1M paths**, where launching kernels
+  from Python is the bottleneck. At 262k paths it takes the compiled step from
+  about 49 ms to 13 ms (both rows too noisy to be quotable, IQR 8–22%). At 4M paths both compiled versions are memory-bound, so
+  the graph makes no difference.
+- **The fused kernel is compute-bound.** It levels off at about 2.1–2.2e10
+  path-steps/s from 1M paths up (16M paths: 94 ms, quotable).
+- **Unfused PyTorch with the bit-exact emulated Philox is another order of
+  magnitude slower.** It exists for the equality checks, not as a baseline.
 - **`FAST_MATH` would be 6–7% faster,** but its `exp` is biased, so it isn't used.
-- **The kernel's throughput is about 3,600× single-threaded NumPy.** That
-  compares against a one-core NumPy prototype on a 20-core CPU, not against a
-  tuned CPU engine. It is not a GPU-vs-CPU figure.
-- **The 16M-path rows and the 20-year 4M-path rows are not quotable.** At a
-  sustained 117 W the GPU reaches 87 °C within seconds and fails the temperature
-  rule.
+- **NumPy is single-threaded and its rows are not clock-gated.** Its speed
+  varied by 2× between runs on this laptop (2.5e6 to 6e6 path-steps/s), depending
+  on how hard the CPU was being held back. The fused kernel's throughput is
+  3,600–6,800× that. That is a one-core NumPy prototype against a fused GPU
+  kernel, not a GPU-vs-CPU figure.
 
 ![benchmark](results/report/bench.png)
 
-The first full run was invalid. A bug in the warm-up loop queued about a thousand
-launches at a time and overheated the GPU. That run is kept in
-`results/bench/bench_run1_*`. See LEARNING.md §6.3.
+**Earlier runs are kept in `results/bench/`. All four used the same rules:**
+- **Run 1 (invalid):** a bug in the warm-up loop queued about a thousand
+  launches at a time and overheated the GPU (LEARNING.md §6.3).
+- **Run 2:** the first clean run; its 4M-path numbers agree with the current run
+  within 5%.
+- **Run 3 (`bench_run3_hot`):** most Triton rows failed the 87 °C rule. The
+  cool-down before each row only waited for 70 °C, and from there the GPU at
+  115 W overheated inside the timing window.
+- **Run 4 (current):** waits for 60 °C before each row.
 
 ## Report
 
