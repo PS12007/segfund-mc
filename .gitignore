@@ -8,3 +8,6 @@ dist/
 # BoC downloads are tiny and get committed on purpose; anything else large stays out
 *.zip
 *.whl
+
+# web engine test driver (written and deleted by tests/test_web_engine.py)
+web/.test_driver.cjs
