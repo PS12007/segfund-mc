@@ -254,7 +254,7 @@ includes copying results to the host, with no warmup discipline and no clock
 check. Phase 6 does the timing properly, and it may change these ratios.
 
 *Update (phase 6, §6.2):* with clock-gated device timing, fused Triton is 12.6×
-faster than unfused PyTorch with its native generator at 1M paths and 19.7× at
+faster than unfused PyTorch with its native generator at 1M paths and 19.8× at
 4M. Unfused PyTorch with the emulated Philox is another 13× slower than that
 (1,023 vs 77 ms at 262k paths).
 
@@ -1140,7 +1140,7 @@ Base 10-year contract:
 |---|---|---|---|
 | 65,536 | 0.419 ms | 78.8 ms (IQR 5.2%, not quotable) | ~190× |
 | 1,048,576 | 5.77 ms | 72.7 ms | 12.6× |
-| 4,194,304 | 22.8 ms | 450 ms | 19.7× |
+| 4,194,304 | 22.8 ms | 450 ms | 19.8× |
 
 Three regimes show up:
 
@@ -1243,7 +1243,7 @@ right, but the gate was written before the run and it stays as it is.
    engine on my 20-core CPU would be much faster than my NumPy, so the honest
    GPU-vs-CPU figure is far smaller, and I haven't measured it. The number I
    quote is against plain PyTorch on the same GPU with its native generator:
-   12.6× at 1M paths and 19.7× at 4M.
+   12.6× at 1M paths and 19.8× at 4M.
 
 2. **Why is unfused PyTorch's time flat from 65k to 1M paths?**
    It is bound by kernel launches, not by the GPU. Each step is dozens of tiny

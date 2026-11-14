@@ -84,7 +84,7 @@ Base 10-year contract (120 monthly steps):
 | Paths | Fused Triton | Unfused PyTorch, `torch.randn` | Speedup |
 |---|---|---|---|
 | 1,048,576 | 5.77 ms | 72.7 ms | **12.6×** |
-| 4,194,304 | 22.8 ms | 450 ms | **19.7×** |
+| 4,194,304 | 22.8 ms | 450 ms | **19.8×** |
 
 - **The fused kernel is compute-bound.** It levels off at about 2.2e10
   path-steps/s from 1M paths up. It writes only 28 bytes per path, which is about
@@ -113,6 +113,33 @@ launches at a time and overheated the GPU. That run is kept in
 It is one self-contained page with the price, the tail distribution,
 convergence, the benchmark table and plot, validation and nested results. It is
 built from the saved JSON files only; nothing is re-simulated.
+
+## Interactive page
+
+[`web/`](web/) is a static page, *Below the Floor*, that simulates the contract
+live in the browser. Open `web/index.html` directly, or serve the folder (for
+example from GitHub Pages). It has five parts:
+- **The futures:** about 1,400 real-world fund paths drawn as a long exposure,
+  with the guarantee floor and the distribution of where they land.
+- **Dials:** volatility, floor, fee, age, rate level and equity risk premium.
+  Turning one re-runs 16,384 risk-neutral and 16,384 real-world futures in a
+  background thread. The ledger shows the cost of the guarantee, the fees, the
+  break-even fee, the chance of a loss and CTE(95).
+- **The worst five percent:** drag across the loss histogram to see the futures
+  behind any slice.
+- **Nested simulation:** one real-world year, then 512 risk-neutral futures from
+  where it ends, to value what's left.
+- **The race:** a replay of the measured benchmark times for 4M paths.
+
+`web/engine.js` is a line-by-line JavaScript port of the NumPy reference, with
+the same Philox stream. `tests/test_web_engine.py` runs it in Node and compares
+it with the Python engine on identical seeds:
+- Philox words match bit for bit.
+- Per-path fund, discount and in-force values agree to 1e-11 relative.
+- The estimator, closed-form put and nested segments also match.
+
+The race and nested numbers come from `web/data.js`, which
+`scripts/export_web_data.py` generates from `results/`.
 
 ## Validation
 
