@@ -202,12 +202,15 @@ def cmd_bench(args) -> int:
 
     if args.quick:
         sizes = {"numpy_fp64": [1 << 12], "torch_philox_fp32": [1 << 14], "torch_randn_fp32": [1 << 16],
+                 "torch_compile_fp32": [1 << 16], "torch_compile_graph_fp32": [1 << 16],
                  "triton_fused_fp32": [1 << 16], "triton_fused_fp32_fastmath": [1 << 16]}
         n_check, reps = 1 << 13, 1
     else:
         gpu_sizes = [1 << 16, 1 << 18, 1 << 20, 1 << 22, 1 << 24]
         sizes = {"numpy_fp64": [1 << 14, 1 << 16], "torch_philox_fp32": [1 << 16, 1 << 18],
-                 "torch_randn_fp32": gpu_sizes[:4], "triton_fused_fp32": gpu_sizes, "triton_fused_fp32_fastmath": gpu_sizes}
+                 "torch_randn_fp32": gpu_sizes[:4], "torch_compile_fp32": gpu_sizes[:4],
+                 "torch_compile_graph_fp32": gpu_sizes[:4],
+                 "triton_fused_fp32": gpu_sizes, "triton_fused_fp32_fastmath": gpu_sizes}
         n_check, reps = 1 << 16, 3
     t0 = time.perf_counter()
     res = B.run_bench(sizes, n_check=n_check, seed=args.seed, numpy_reps=reps)

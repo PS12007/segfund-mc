@@ -109,7 +109,8 @@ def _bench_plot(b: dict) -> bytes | None:
         return None
     scen = list(dict.fromkeys(r["scenario"] for r in rows))
     fig, axes = plt.subplots(1, len(scen), figsize=(5.2 * len(scen), 4.0), sharey=True, squeeze=False)
-    marks = dict(numpy_fp64="s", torch_philox_fp32="v", torch_randn_fp32="^", triton_fused_fp32="o", triton_fused_fp32_fastmath="D")
+    marks = dict(numpy_fp64="s", torch_philox_fp32="v", torch_randn_fp32="^", torch_compile_fp32="<",
+                 torch_compile_graph_fp32=">", triton_fused_fp32="o", triton_fused_fp32_fastmath="D")
     for ax, s in zip(axes[0], scen):
         for e in ENGINE_LABEL:
             rs = sorted((r for r in rows if r["scenario"] == s and r["engine"] == e), key=lambda r: r["n_paths"])

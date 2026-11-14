@@ -31,11 +31,14 @@ from segfund.reference.engine import mean_and_se, simulate
 from segfund.rng.philox import PhiloxNormals
 from segfund.validate import DEFAULT_CONFIG, _load_cfg
 
-ENGINES = ("numpy_fp64", "torch_philox_fp32", "torch_randn_fp32", "triton_fused_fp32", "triton_fused_fp32_fastmath")
+ENGINES = ("numpy_fp64", "torch_philox_fp32", "torch_randn_fp32", "torch_compile_fp32", "torch_compile_graph_fp32",
+           "triton_fused_fp32", "triton_fused_fp32_fastmath")
 ENGINE_LABEL = {
     "numpy_fp64": "NumPy fp64 (CPU, reference)",
     "torch_philox_fp32": "PyTorch unfused fp32, emulated Philox (bit-exact stream)",
     "torch_randn_fp32": "PyTorch unfused fp32, torch.randn (fair baseline)",
+    "torch_compile_fp32": "PyTorch + torch.compile per step, torch.randn",
+    "torch_compile_graph_fp32": "PyTorch + torch.compile + CUDA graph, torch.randn",
     "triton_fused_fp32": "Triton fused fp32 (default)",
     "triton_fused_fp32_fastmath": "Triton fused fp32 FAST_MATH (biased exp; timing only)",
 }
@@ -65,7 +68,7 @@ def gpu_processes() -> list[dict]:
         return []
 
 
-def _equality(m, n_steps: int, n_check: int, seed: int) -> dict[str, dict]:
+def _equality(m, n_steps: int, n_check: int, seed: int, with_compile: bool = True) -> dict[str, dict]:
     """Run each GPU engine against the fp64 reference on n_check paths. Returns per-engine verdicts."""
     import torch
 
@@ -98,6 +101,30 @@ def _equality(m, n_steps: int, n_check: int, seed: int) -> dict[str, dict]:
                                    z_vs_reference=z, mean_ref=mc, mean_randn=mr, n_check=n_check,
                                    note="different random numbers: |mean diff| <= 4 combined SE")
     out["numpy_fp64"] = dict(passed=True, failed=[], note="is the reference")
+    if not with_compile:
+        for key in ("torch_compile_fp32", "torch_compile_graph_fp32"):
+            out[key] = dict(passed=False, failed=["not run (with_compile=False)"], note="skipped")
+        return out
+
+    # torch.compile engines: same torch.randn numbers as the eager engine, so compare path by path
+    # against it (fp32 vs fp32, phase 2 V8a tolerance) and keep the statistical check on the mean
+    from segfund.gpu.torch_compiled import CompiledEngine
+    from segfund.gpu.torch_engine import simulate_torch_tensors
+
+    eager = [t.double().cpu().numpy() for t in simulate_torch_tensors(m, n_check, seed, normals="randn")]
+    tol = 1e-6 * n_steps
+    for key, mode in (("torch_compile_fp32", "compile"), ("torch_compile_graph_fp32", "compile+graph")):
+        t0 = time.perf_counter()
+        got = [t.double().cpu().numpy() for t in CompiledEngine(m, mode).simulate(n_check, seed)]
+        first_s = time.perf_counter() - t0
+        rel = max(float(np.max(np.abs(a - b) / np.abs(b))) for a, b in zip(got[3:], eager[3:]))
+        pv = got[0] + got[1] - got[2]
+        mg, sg = mean_and_se(pv)
+        zc = (mg - mc) / float(np.hypot(sc, sg))
+        ok = rel <= tol and abs(zc) <= 4.0
+        out[key] = dict(passed=bool(ok), failed=[] if ok else ["state vs eager or mean vs reference"],
+                        max_rel_vs_eager=rel, tol=tol, z_vs_reference=zc, first_call_s=first_s, n_check=n_check,
+                        note="same normals as the eager torch.randn engine: per-path state within 1e-6 x steps of it")
     return out
 
 
@@ -122,13 +149,18 @@ def _gpu_fn(engine: str, m, n: int, seed: int):
         eng = FusedEngine(m, fast_math=engine.endswith("fastmath"))
         buf = eng.alloc(n)
         return lambda: eng.launch(buf, n, seed)
+    if engine.startswith("torch_compile"):
+        from segfund.gpu.torch_compiled import CompiledEngine
+
+        ce = CompiledEngine(m, "compile+graph" if engine == "torch_compile_graph_fp32" else "compile")
+        return lambda: ce.simulate(n, seed)
     pm = pack(m)
     normals = "randn" if engine == "torch_randn_fp32" else "philox"
     return lambda: simulate_torch_tensors(m, n, seed, dtype=torch.float32, normals=normals, pm=pm)
 
 
 def run_bench(sizes: dict[str, list[int]], n_check: int = 1 << 16, seed: int = 20261113, numpy_reps: int = 3,
-              log=print) -> dict:
+              log=print, with_compile: bool = True) -> dict:
     import torch
 
     from segfund.bench.timing import ClockMonitor, cooldown, gpu_static, time_gpu
@@ -151,7 +183,7 @@ def run_bench(sizes: dict[str, list[int]], n_check: int = 1 << 16, seed: int = 2
         n_steps = m.time_grid().size - 1
         models[sname] = (m, n_steps)
         log(f"[{sname}] equality check on {n_check:,} paths ...")
-        eq = _equality(m, n_steps, n_check, seed)
+        eq = _equality(m, n_steps, n_check, seed, with_compile)
         checks[sname] = eq
         for e, v in eq.items():
             log(f"    {e:<28} {'PASS' if v['passed'] else 'FAIL'}  {v.get('note', '')}")
@@ -202,6 +234,8 @@ def summarize(res: dict) -> str:
                 extra = f"  worst |mean diff| = {v['worst_mean_diff_over_se']:.1e} SE"
             if "z_vs_reference" in v:
                 extra = f"  z = {v['z_vs_reference']:+.2f}"
+            if "max_rel_vs_eager" in v:
+                extra += f"  per-path vs eager {v['max_rel_vs_eager']:.1e} (tol {v['tol']:.1e}); first call {v['first_call_s']:.1f} s"
             lines.append(f"  [{'PASS' if v['passed'] else 'FAIL'}] {ENGINE_LABEL[e]}{extra}")
         rs = [r for r in res["rows"] if r["scenario"] == sname and "median_ms" in r]
         np_rows = [r for r in rs if r["engine"] == "numpy_fp64"]

@@ -130,8 +130,12 @@ class ClockMonitor:
                 pass
 
 
-def cooldown(monitor: ClockMonitor | None, below_c: float = 70.0, max_seconds: float = 90.0) -> float:
-    """Idle until the GPU is below `below_c`, so one row's heat doesn't fail the next row's gate."""
+def cooldown(monitor: ClockMonitor | None, below_c: float = 60.0, max_seconds: float = 120.0) -> float:
+    """Idle until the GPU is below `below_c`, so one row's heat doesn't fail the next row's gate.
+
+    60 C, not 70 C: bench run 3 showed that from 70 C the fused kernel at ~115 W
+    crosses the 87 C gate inside its own timing window on this laptop.
+    """
     t0 = time.time()
     while monitor and monitor.available and time.time() - t0 < max_seconds:
         s = monitor.latest()
