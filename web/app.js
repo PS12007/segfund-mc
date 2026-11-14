@@ -819,6 +819,11 @@
       `. The NumPy time is extrapolated from a ${npy.note.match(/[\d,]+ paths/)[0]} run on one core and isn't clock-gated; on this laptop it varied by 2× between runs. ` +
       `A multithreaded CPU engine would close much of that gap, so read it as "prototype vs fused kernel", not "CPU vs GPU".`;
     $('go').addEventListener('click', go);
+    // start by itself the first time the lanes are on screen
+    const rio = new IntersectionObserver((es) => {
+      if (es[0].isIntersecting) { rio.disconnect(); if (!raf) go(); }
+    }, { threshold: 0.6 });
+    rio.observe(lanesEl);
   })();
 
   // ---------------------------------------------------------------- page plumbing
