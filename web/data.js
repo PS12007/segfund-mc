@@ -8,7 +8,15 @@ window.SF_DATA = {
     "key": "triton",
     "label": "Fused Triton kernel",
     "note": "one GPU launch, fp32",
-    "ms": 22.765567779541016,
+    "ms": 23.793344497680664,
+    "quotable": true,
+    "measured": true
+   },
+   {
+    "key": "compile",
+    "label": "PyTorch, compiled",
+    "note": "torch.compile + CUDA graph, GPU",
+    "ms": 256.9771270751953,
     "quotable": true,
     "measured": true
    },
@@ -16,23 +24,23 @@ window.SF_DATA = {
     "key": "torch",
     "label": "Plain PyTorch",
     "note": "unfused, torch.randn, GPU",
-    "ms": 449.6234436035156,
+    "ms": 467.40863037109375,
     "quotable": true,
     "measured": true
    },
    {
     "key": "numpy",
     "label": "NumPy reference",
-    "note": "one CPU core, fp64; extrapolated from 65,536 paths",
-    "ms": 92530.78399971128,
+    "note": "one CPU core, fp64; extrapolated from 16,384 paths",
+    "ms": 160630.2208006382,
     "quotable": false,
     "measured": false
    }
   ],
   "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
   "cpu": "Intel Core i7-14700HX",
-  "timestamp": "2026-11-13T18:48:35",
-  "commit": "f3ffe5d"
+  "timestamp": "2026-11-14T00:17:49",
+  "commit": "add9dc7-dirty"
  },
  "nested": {
   "inner_paths": 134217728,

@@ -28,13 +28,18 @@ def main() -> int:
 
     n_race = 1 << 22
     tri, th = pick("triton_fused_fp32", n_race), pick("torch_randn_fp32", n_race)
-    npy = pick("numpy_fp64")  # largest NumPy run; extrapolated by throughput (it is linear in paths)
+    tc = pick("torch_compile_graph_fp32", n_race)
+    # NumPy: the row with the best throughput (as in segfund bench's "x NumPy" column), extrapolated
+    # to the race size by path-steps/s (its cost is linear in paths)
+    npy = max((r for r in rows if r["engine"] == "numpy_fp64"), key=lambda r: r["path_steps_per_s"])
     steps = tri["n_steps"]
     race = dict(
         n_paths=n_race, n_steps=steps,
         lanes=[
             dict(key="triton", label="Fused Triton kernel", note="one GPU launch, fp32",
                  ms=tri["median_ms"], quotable=tri["quotable"], measured=True),
+            *([dict(key="compile", label="PyTorch, compiled", note="torch.compile + CUDA graph, GPU",
+                    ms=tc["median_ms"], quotable=tc["quotable"], measured=True)] if tc else []),
             dict(key="torch", label="Plain PyTorch", note="unfused, torch.randn, GPU",
                  ms=th["median_ms"], quotable=th["quotable"], measured=True),
             dict(key="numpy", label="NumPy reference", note=f"one CPU core, fp64; extrapolated from {npy['n_paths']:,} paths",

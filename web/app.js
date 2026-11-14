@@ -805,11 +805,18 @@
       raf = requestAnimationFrame(tick);
     }
 
-    const [tri, th, npy] = d.lanes;
+    const lane = (k) => d.lanes.find((l) => l.key === k);
+    const tri = lane('triton'), th = lane('torch'), npy = lane('numpy'), tc = lane('compile');
+    const gpuLanes = d.lanes.filter((l) => l.measured);
+    const allGated = gpuLanes.every((l) => l.quotable);
     $('race-meta').textContent = `${d.gpu.replace('NVIDIA GeForce ', '')} · ${d.cpu} · measured ${d.timestamp.slice(0, 10)}`;
-    $('ratio').innerHTML = `The fused kernel finishes in <b>${tri.ms.toFixed(1)} ms</b>: <b>${(th.ms / tri.ms).toFixed(1)}×</b> faster than plain PyTorch on the same GPU, ` +
-      `and about <b>${nf0.format(Math.round(npy.ms / tri.ms / 10) * 10)}×</b> NumPy's pace. Both GPU times passed the project's clock gate (SM clock at least 70% of max, ` +
-      `under 87 °C, run-to-run spread within 5%). The NumPy time is extrapolated from a ${npy.note.match(/[\d,]+ paths/)[0]} run on one core and isn't clock-gated. ` +
+    $('ratio').innerHTML = `The fused kernel finishes in <b>${tri.ms.toFixed(1)} ms</b>: <b>${(th.ms / tri.ms).toFixed(1)}×</b> faster than plain PyTorch on the same GPU` +
+      (tc ? `, and still <b>${(tc.ms / tri.ms).toFixed(1)}×</b> faster than PyTorch with torch.compile and a CUDA graph, the best the compiler does here` : '') +
+      `. Against NumPy's pace it's about <b>${nf0.format(Math.round(npy.ms / tri.ms / 10) * 10)}×</b>. ` +
+      (allGated ? 'All GPU times passed' : 'GPU times were checked against') +
+      ` the project's clock gate (SM clock at least 70% of max, under 87 °C, run-to-run spread within 5%)` +
+      (allGated ? '' : `; ${gpuLanes.filter((l) => !l.quotable).map((l) => l.label).join(', ')} did not pass it and should be read as approximate`) +
+      `. The NumPy time is extrapolated from a ${npy.note.match(/[\d,]+ paths/)[0]} run on one core and isn't clock-gated; on this laptop it varied by 2× between runs. ` +
       `A multithreaded CPU engine would close much of that gap, so read it as "prototype vs fused kernel", not "CPU vs GPU".`;
     $('go').addEventListener('click', go);
   })();
