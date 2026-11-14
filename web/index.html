@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Below the Floor</title>
+<meta name="description" content="A segregated fund guarantee, simulated across sixteen thousand futures in your browser, with the same model and random numbers as the GPU engine behind it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..600;1,6..96,400..600&family=Martian+Mono:wght@300;400&family=Schibsted+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230c0b09'/><path d='M3 10 Q12 4 16 14 T29 8' stroke='%23ede5d3' fill='none' stroke-width='1.5'/><path d='M3 22 H29' stroke='%23ff5233' stroke-width='1.5'/></svg>">
+</head>
+<body>
+
+<div class="wrap">
+  <div class="strip">
+    <span><b>segfund-mc</b> &nbsp;·&nbsp; an almanac of simulated futures</span>
+    <span>Monte Carlo · Hull-White · Philox4x32-10</span>
+  </div>
+
+  <header class="masthead">
+    <div class="kicker">A seg fund<br>guarantee,<br>simulated</div>
+    <h1><span class="line"><span>Below</span></span><span class="line"><span>the <em>Floor</em></span></span></h1>
+  </header>
+
+  <div class="dek fade-in">
+    <div></div>
+    <p>Put $100,000 into a segregated fund and the insurer promises you'll get at least $75,000 back in ten years, whatever the market does. If you die first, your family gets the full $100,000.</p>
+    <p>That promise costs nothing in good futures and a lot in bad ones. So the only way to price it is to imagine thousands of futures and count. Every line below is one of them, simulated in your browser by the same model, with the same random numbers, as the GPU engine behind this page.</p>
+  </div>
+
+  <!-- I. the exposure -->
+  <figure class="exposure" id="exposure" style="margin-top:0;margin-bottom:0">
+    <canvas id="hero" role="img" aria-label="Fund value over ten years across thousands of simulated futures, with the guarantee floor at 75,000 dollars"></canvas>
+    <div class="tally" id="tally">&nbsp;</div>
+  </figure>
+  <div class="caption-under">
+    <div class="margin-note">Fig. I<br>real-world scenarios</div>
+    <p id="hero-caption">Each trail is the fund in one future, month by month, after fees. The red line is the floor. <span class="red">Futures that finish below it</span> are where the insurer pays the difference. Hover to read the spread at any year.</p>
+  </div>
+
+  <!-- II. dials & ledger -->
+  <section class="chapter" id="dials">
+    <div class="numeral" aria-hidden="true">II</div>
+    <div>
+      <h2>Is the fee <em>enough?</em></h2>
+      <p class="lede">The insurer keeps <strong>0.40% a year</strong> of the fund to pay for the promise. Price it the way a hedger would (risk-neutral), and compare what the promise costs with what the fee brings in. Then turn the dials: the whole simulation re-runs.</p>
+
+      <div class="dials-ledger">
+        <div class="dials" id="dial-list"></div>
+
+        <div>
+          <div class="ledger" id="ledger">
+            <div class="row big"><div class="what">At hedging cost, the insurer is short<small id="l-net-note">risk-neutral · antithetic + control variate</small></div><div class="fig" id="l-net">—</div></div>
+            <div class="row"><div class="what">What the promise costs<small>present value of maturity and death claims</small></div><div class="fig" id="l-claims">—</div></div>
+            <div class="row"><div class="what">What the fee brings in<small>present value of the guarantee fee</small></div><div class="fig" id="l-fees">—</div></div>
+            <div class="row"><div class="what">Fee that would break even<small>marked on the fee dial</small></div><div class="fig" id="l-be">—</div></div>
+            <div class="row"><div class="what">Real-world chance of a loss<small>with an equity risk premium</small></div><div class="fig" id="l-ploss">—</div></div>
+            <div class="row"><div class="what">Average loss in the worst 5%<small>CTE(95), what capital is held against</small></div><div class="fig" id="l-cte">—</div></div>
+          </div>
+          <div class="balance" aria-hidden="true">
+            <div class="bar claims"><span id="b-claims"></span></div>
+            <div class="bar fees"><span id="b-fees"></span></div>
+            <div class="legend"><span>claims</span><span>fees</span></div>
+          </div>
+          <div class="status" id="status"><span class="dot"></span><span id="status-text">warming up the engine…</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- III. the tail -->
+  <section class="chapter" id="tail">
+    <div class="numeral" aria-hidden="true">III</div>
+    <div>
+      <h2>The worst <em>five percent</em></h2>
+      <p class="lede">Under realistic markets the insurer usually comes out ahead. Regulators care about the futures where it doesn't. Below is every future's result for the insurer: claims paid minus fees earned, in today's dollars. <strong>Drag across it</strong> to see the futures behind any slice.</p>
+
+      <div class="presets">
+        <button class="textbtn" data-sel="worst5">worst 5%</button>
+        <button class="textbtn" data-sel="loss">every loss</button>
+        <button class="textbtn" data-sel="best">best 25%</button>
+        <button class="textbtn" data-sel="middle">the middle</button>
+      </div>
+      <div class="plate hist" id="hist-plate"><canvas id="hist" role="img" aria-label="Histogram of the insurer's result per future; drag to select"></canvas></div>
+      <div class="plate-label"><span>← insurer profits</span><span id="hist-label">&nbsp;</span><span>insurer loses →</span></div>
+
+      <div class="tail-grid">
+        <div>
+          <div class="plate paths"><canvas id="slice" role="img" aria-label="Fund paths of the selected futures"></canvas></div>
+          <div class="plate-label"><span>fund value, years 0 – 10</span><span id="slice-label">&nbsp;</span></div>
+        </div>
+        <div>
+          <dl class="facts" id="facts"></dl>
+          <p class="story" id="story">&nbsp;</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- IV. nested -->
+  <section class="chapter" id="nested">
+    <div class="numeral" aria-hidden="true">IV</div>
+    <div>
+      <h2>A future <em>inside</em> a future</h2>
+      <p class="lede">Capital rules ask a harder question: a year from now, in a bad market, what will the remaining promise be worth? Answering it means simulating a real-world year, then, from wherever that lands, <strong>a whole new set of futures</strong> to value what's left. One path in, hundreds out, for every scenario.</p>
+
+      <div class="plate tree"><canvas id="tree" role="img" aria-label="One real-world year, then a fan of risk-neutral futures from its end point"></canvas></div>
+      <div class="plate-label"><span>real-world year → valuation date → risk-neutral futures to maturity</span><span id="tree-label">&nbsp;</span></div>
+
+      <div class="nested-grid">
+        <div class="cost" id="cost"></div>
+        <div style="display:grid;gap:14px;justify-items:start">
+          <button class="go" id="reroll">Another year</button>
+          <span class="margin-note">picks a new real-world year and re-values the rest of the contract from where it ends</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- V. the race -->
+  <section class="chapter" id="race">
+    <div class="numeral" aria-hidden="true">V</div>
+    <div>
+      <h2>Four million futures, <em>three ways</em></h2>
+      <p class="lede">Behind this page is a Python project that runs the same model three ways. The race replays their <strong>measured</strong> times for 4,194,304 futures of 120 monthly steps, in real time.</p>
+
+      <div class="race-head">
+        <span class="margin-note" id="race-meta"></span>
+        <button class="go" id="go">Start the race</button>
+      </div>
+      <div class="race" id="lanes"></div>
+      <p class="ratio" id="ratio"></p>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <div class="sig">segfund&#8209;mc</div>
+    <div>
+      <h3>How this page works</h3>
+      <p>The browser engine (<code>web/engine.js</code>) is a line-by-line port of the project's NumPy reference. It draws the same Philox4x32-10 random numbers, so path 17 at month 40 is the same future here as on the GPU. A test checks it against the Python engine: the random words match exactly, and per-path values agree to about 1e-11.</p>
+    </div>
+    <div>
+      <h3>What the numbers are</h3>
+      <p id="colo-numbers">Prices use 16,384 futures per run (antithetic pairs and a Hull-White put control variate). The race and nested figures are measured results from the repository, not computed here.</p>
+    </div>
+    <div>
+      <h3>What it isn't</h3>
+      <p>An educational model. It is not actuarially approved, and every assumption is illustrative: one-factor rates, textbook mortality, an invented lapse rule. Source, validation and the full write-up are on <a href="https://github.com/PS12007/segfund-mc">GitHub</a>.</p>
+    </div>
+  </footer>
+</div>
+
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
